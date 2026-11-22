@@ -51,7 +51,7 @@ public sealed class WelcomeView : UserControl
                 s.Children.Add(K.Pill("Scegli cartella", async () => { if (await FolderPick.PickDownloadFolderAsync()) f.Text = _a.Settings.DownloadFolder; }, false, K.Folder));
                 break;
             case 3:
-                Title("Correzione brani", "Sistema in automatico titolo e artista dei brani (esclude bootleg, cover, remix e simili). Di base è spenta.");
+                Title("Correzione brani", "Sistema in automatico titolo e artista dei brani (esclude bootleg, cover, remix e simili). Di base è attiva.");
                 s.Children.Add(K.Tgl(_a.Settings.AutoFix, v => _a.Settings.AutoFix = v, "Attiva la correzione brani"));
                 break;
             case 4:

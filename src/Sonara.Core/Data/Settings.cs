@@ -17,7 +17,8 @@ public sealed class AppSettings
     public int ImportRefreshHours { get; set; } = 24;
     public bool ImportNotify { get; set; } = true;
     public string DownloadFolder { get; set; } = "";
-    public bool AutoFix { get; set; }
+    public bool AutoFix { get; set; } = true;
+    public int SettingsVersion { get; set; }
     public bool LightTheme { get; set; }
     public bool CheckUpdates { get; set; } = true;
     public bool ExclusiveOutput { get; set; }
@@ -31,7 +32,12 @@ public sealed class AppSettings
 
     public event Action? Changed;
 
-    public static AppSettings Load() => Persist.Read<AppSettings>(PathOf) ?? new AppSettings();
+    public static AppSettings Load()
+    {
+        var s = Persist.Read<AppSettings>(PathOf) ?? new AppSettings();
+        if (s.SettingsVersion < 1) { s.AutoFix = true; s.SettingsVersion = 1; }
+        return s;
+    }
 
     public void Save()
     {
