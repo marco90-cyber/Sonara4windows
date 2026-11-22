@@ -1,0 +1,51 @@
+name: Build Windows
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Test (Sonara.Core)
+        shell: pwsh
+        run: |
+          if (Test-Path tests/Sonara.Core.Tests) { dotnet test tests/Sonara.Core.Tests -c Release }
+
+      - name: Publish app
+        shell: pwsh
+        run: dotnet publish src/Sonara.App/Sonara.App.csproj -c Release -r win-x64 -p:Platform=x64 -o publish
+
+      - name: Installer (Inno Setup)
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress; }
+          $ver = "0.1.${{ github.run_number }}"
+          & $iscc "/DAppVersion=$ver" "/DSourceDir=$PWD\publish" "/O$PWD\dist" installer\sonara.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed" }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Sonara-Setup
+          path: dist/*.exe
+
+      - name: Release
+        if: github.ref == 'refs/heads/main'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "v0.1.${{ github.run_number }}"
+          gh release create $tag (Get-ChildItem dist\*.exe).FullName --title "Sonara per Windows $tag" --notes "Build automatica del commit ${{ github.sha }}." --target ${{ github.sha }}
