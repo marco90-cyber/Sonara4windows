@@ -113,6 +113,7 @@ public sealed class DownloadManager
                         var target = Path.Combine(dir, name);
                         if (File.Exists(target)) target = Path.Combine(dir, Safe($"{t.Artist} - {t.Title}") + $" [{t.VideoId}]" + Path.GetExtension(r.FilePath));
                         File.Copy(r.FilePath, target, true);
+                        await TagWriter.WriteAsync(target, t, ct).ConfigureAwait(false);
                         lock (_gate)
                         {
                             Items = Items.Append(new Item(t.VideoId, t.Title, t.Artist, t.DurationSec, t.Thumb, groupName, Path.GetRelativePath(_settings.DownloadFolder, target))).ToList();
