@@ -204,7 +204,7 @@ public sealed class Shell : UserControl
     {
         var r = _a.Runner.Current;
         var sp = new StackPanel { Spacing = 8, MinWidth = 260 };
-        if (_a.Runner.Active) sp.Children.Add(K.T($"Importazione: {r.Name} ({r.Done}/{r.Total})", 13, Pal.Text, false, 2));
+        if (_a.Runner.Active) { var pr = new ImportProgress(); pr.Set(r.Name, r.Done, r.Total); sp.Children.Add(pr); }
         else sp.Children.Add(K.T("Nessuna attività in corso", 13, Pal.Sub));
         sp.Children.Add(K.Pill("Importa playlist", () => ImportDialog.Show(XamlRoot), false, K.Add));
         var fl = new Flyout { Content = sp };

@@ -27,14 +27,24 @@ public static class ImportDialog
     public static async void Start(PlaylistImport.Ref r, XamlRoot? root)
     {
         var a = AppServices.I;
+        ContentDialog? dlg = null;
         try
         {
-            var imp = await a.Runner.ImportPlaylistAsync(r);
+            var prog = new ImportProgress();
+            if (root != null)
+            {
+                dlg = new ContentDialog { XamlRoot = root, Title = "Importazione", Content = prog, PrimaryButtonText = "Annulla", CloseButtonText = "Nascondi" };
+                dlg.PrimaryButtonClick += (_, _) => a.Runner.CancelAll();
+                _ = dlg.ShowAsync();
+            }
+            var imp = await a.Runner.ImportPlaylistAsync(r, (meta, found, dn, tt) => a.RunUi(() => prog.Set(meta.Name, dn, tt)));
+            dlg?.Hide();
             Nav.Go("entry:" + imp.Entry.BrowseId, () => new DetailView(imp.Entry));
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException) { dlg?.Hide(); }
         catch (Exception e)
         {
+            dlg?.Hide();
             if (root != null) await K.Info(root, "Importazione non riuscita", e.Message);
         }
     }
