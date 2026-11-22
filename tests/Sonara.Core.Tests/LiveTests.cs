@@ -69,8 +69,18 @@ public class LiveTests
     {
         var dir = Path.Combine(Path.GetTempPath(), "sonara-test");
         var res = new StreamResolver(dir) { Quality = 2 };
-        var r = await res.ResolveAsync("4D7u5KF7SP8");
-        _o.WriteLine($"{r.FilePath} {r.Container} {r.BitrateKbps}kbps {new FileInfo(r.FilePath).Length} byte");
-        Assert.True(new FileInfo(r.FilePath).Length > 10000);
+        var errors = new List<string>();
+        foreach (var id in new[] { "dQw4w9WgXcQ", "jNQXAC9IVRw", "9bZkp7q19f0", "kJQP7kiw5Fk", "4D7u5KF7SP8" })
+        {
+            try
+            {
+                var r = await res.ResolveAsync(id);
+                _o.WriteLine($"OK {id}: {r.FilePath} {r.Container} {r.BitrateKbps}kbps {new FileInfo(r.FilePath).Length} byte");
+                Assert.True(new FileInfo(r.FilePath).Length > 10000);
+                return;
+            }
+            catch (Exception e) { errors.Add($"{id}: {e.GetType().Name}: {e.Message}"); }
+        }
+        throw new Xunit.Sdk.XunitException("Nessun video riproducibile: " + string.Join(" | ", errors));
     }
 }

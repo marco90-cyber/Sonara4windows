@@ -32,6 +32,20 @@ jobs:
         shell: pwsh
         run: dotnet publish src/Sonara.App/Sonara.App.csproj -c Release -r win-x64 -p:Platform=x64 -o publish
 
+      - name: Avvio dell'app (smoke test)
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:APPDATA "Sonara"
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          '{"WelcomeDone":true}' | Set-Content (Join-Path $dir "settings.json")
+          $p = Start-Process "$PWD\publish\Sonara.exe" -PassThru
+          Start-Sleep -Seconds 25
+          $crash = Join-Path $dir "crash.log"
+          if (Test-Path $crash) { Write-Host (Get-Content $crash -Raw); echo "CRASH" ; $bad = $true }
+          if ($p.HasExited) { Write-Host "L'app e' uscita con codice $($p.ExitCode)"; $bad = $true }
+          else { Write-Host "App ancora in esecuzione dopo 25 s"; Stop-Process $p -Force }
+          if ($bad) { exit 1 }
+
       - name: Installer (Inno Setup)
         shell: pwsh
         run: |
