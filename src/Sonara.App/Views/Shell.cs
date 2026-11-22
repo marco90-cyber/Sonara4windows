@@ -51,6 +51,7 @@ public sealed class Shell : UserControl
         var mid = new Grid();
         mid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(56) });
         mid.RowDefinitions.Add(new RowDefinition());
+        mid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         var bar = new Grid { Padding = new Thickness(16, 0, 16, 0), ColumnSpacing = 8 };
         bar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         bar.ColumnDefinitions.Add(new ColumnDefinition());
@@ -82,6 +83,7 @@ public sealed class Shell : UserControl
         Grid.SetColumn(right, 2); bar.Children.Add(right);
         mid.Children.Add(bar);
         Grid.SetRow(_center, 1); mid.Children.Add(_center);
+        var act = new ActivityBar(); Grid.SetRow(act, 2); mid.Children.Add(act);
         Grid.SetColumn(mid, 1); _root.Children.Add(mid);
 
         // pannello destro

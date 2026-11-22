@@ -24,6 +24,10 @@ public sealed class DownloadManager
     private int _pending;
     private readonly Dictionary<string, (int Done, int Total)> _groups = new();
     private string _current = "";
+    private double _frac;
+    private long _lastTick;
+    /// <summary>Avanzamento (0–1) del brano in scarico.</summary>
+    public double Fraction => _frac;
 
     public List<Item> Items { get; private set; } = new();
     public event Action? Changed;
@@ -105,10 +109,11 @@ public sealed class DownloadManager
                 {
                     ct.ThrowIfCancellationRequested();
                     _current = $"{t.Artist} – {t.Title}";
+                    _frac = 0;
                     Changed?.Invoke();
                     try
                     {
-                        var r = await _resolver.ResolveAsync(t.VideoId, null, ct, preferMp4: true).ConfigureAwait(false);
+                        var r = await _resolver.ResolveAsync(t.VideoId, new Progress<double>(p => { _frac = p; var n = Environment.TickCount64; if (n - _lastTick > 250) { _lastTick = n; Changed?.Invoke(); } }), ct, preferMp4: true).ConfigureAwait(false);
                         var name = Safe($"{t.Artist} - {t.Title}") + Path.GetExtension(r.FilePath);
                         var target = Path.Combine(dir, name);
                         if (File.Exists(target)) target = Path.Combine(dir, Safe($"{t.Artist} - {t.Title}") + $" [{t.VideoId}]" + Path.GetExtension(r.FilePath));
@@ -122,7 +127,7 @@ public sealed class DownloadManager
                     }
                     catch (OperationCanceledException) { throw; }
                     catch (Exception) { /* un brano non riuscito non ferma gli altri */ }
-                    done++;
+                    done++; _frac = 0;
                     lock (_gate) _groups[groupName] = (done, list.Count);
                     Changed?.Invoke();
                 }
