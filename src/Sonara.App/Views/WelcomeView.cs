@@ -24,7 +24,7 @@ public sealed class WelcomeView : UserControl
         Show();
     }
 
-    private static readonly string[] Genres = { "Pop", "Rock", "Hip hop", "Elettronica", "Jazz", "Classica", "Indie", "R&B", "Metal", "Latino", "Dance", "Cantautori" };
+    public static readonly string[] Genres = { "Pop", "Rock", "Hip hop", "Elettronica", "Jazz", "Classica", "Indie", "R&B", "Metal", "Latino", "Dance", "Cantautori" };
 
     private void Show()
     {

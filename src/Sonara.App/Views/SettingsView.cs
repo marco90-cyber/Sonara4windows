@@ -30,6 +30,64 @@ public sealed class SettingsView : UserControl
 
         r.Children.Add(K.Tgl(S.CheckUpdates, v => { S.CheckUpdates = v; S.Save(); }, "Controlla gli aggiornamenti all'avvio"));
 
+        r.Children.Add(Sec("I tuoi gusti"));
+        r.Children.Add(K.T("Generi preferiti", 13, Pal.Text, true));
+        var chosen = new HashSet<string>((S.FavGenres ?? "").Split('|', StringSplitOptions.RemoveEmptyEntries));
+        var gWrap = new StackPanel { Spacing = 8 };
+        void BuildGenres()
+        {
+            gWrap.Children.Clear();
+            for (var i = 0; i < WelcomeView.Genres.Length; i += 4)
+            {
+                var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+                foreach (var g in WelcomeView.Genres.Skip(i).Take(4))
+                {
+                    var gg = g;
+                    row.Children.Add(K.Chip(gg, chosen.Contains(gg), () =>
+                    {
+                        if (!chosen.Add(gg)) chosen.Remove(gg);
+                        S.FavGenres = string.Join('|', chosen); S.Save(); BuildGenres();
+                    }));
+                }
+                gWrap.Children.Add(row);
+            }
+        }
+        BuildGenres();
+        r.Children.Add(gWrap);
+        r.Children.Add(K.T("Artisti preferiti", 13, Pal.Text, true));
+        var chips = new StackPanel { Spacing = 6 };
+        void BuildArtists()
+        {
+            chips.Children.Clear();
+            foreach (var e in S.FavArtists.ToList())
+            {
+                var ee = e;
+                chips.Children.Add(K.Chip("✓ " + ee.Title, true, () => { S.FavArtists.RemoveAll(x => x.BrowseId == ee.BrowseId); S.Save(); BuildArtists(); }));
+            }
+        }
+        var res = new StackPanel { Spacing = 4 };
+        var box = new AutoSuggestBox { PlaceholderText = "Cerca un artista da aggiungere", Width = 360, HorizontalAlignment = HorizontalAlignment.Left };
+        box.QuerySubmitted += async (b, _) =>
+        {
+            res.Children.Clear();
+            try
+            {
+                var l = await Sonara.Core.Yt.YtApi.SearchEntriesAsync(b.Text, Sonara.Core.Yt.Kind.Artists, 1);
+                foreach (var a in l.Take(6))
+                {
+                    var aa = a;
+                    res.Children.Add(K.Clickable(K.T(aa.Title, 13, Pal.Text), () =>
+                    {
+                        if (!S.FavArtists.Any(x => x.BrowseId == aa.BrowseId)) { S.FavArtists.Add(aa); S.Save(); }
+                        res.Children.Clear(); BuildArtists();
+                    }, null, null, 8, new Thickness(8)));
+                }
+            }
+            catch { res.Children.Add(K.T("Ricerca non riuscita", 12, Pal.Sub)); }
+        };
+        BuildArtists();
+        r.Children.Add(box); r.Children.Add(res); r.Children.Add(chips);
+
         r.Children.Add(Sec("Paese"));
         var c = new ComboBox { ItemsSource = Countries.Codes.Select(Countries.Name).ToList(), Width = 260 };
         c.SelectedIndex = Math.Max(0, Array.IndexOf(Countries.Codes, S.EffectiveCountry()));
