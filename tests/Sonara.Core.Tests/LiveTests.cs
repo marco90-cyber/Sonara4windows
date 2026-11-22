@@ -43,7 +43,7 @@ public class LiveTests
     [Fact]
     public async Task Radio()
     {
-        var r = await YtApi.RadioAsync("h5EofwRzit0");
+        var r = await YtApi.RadioAsync("4D7u5KF7SP8");
         _o.WriteLine($"radio: {r.Count}");
         Assert.NotEmpty(r);
     }
@@ -69,7 +69,7 @@ public class LiveTests
     {
         var dir = Path.Combine(Path.GetTempPath(), "sonara-test");
         var res = new StreamResolver(dir) { Quality = 2 };
-        var r = await res.ResolveAsync("h5EofwRzit0");
+        var r = await res.ResolveAsync("4D7u5KF7SP8");
         _o.WriteLine($"{r.FilePath} {r.Container} {r.BitrateKbps}kbps {new FileInfo(r.FilePath).Length} byte");
         Assert.True(new FileInfo(r.FilePath).Length > 10000);
     }

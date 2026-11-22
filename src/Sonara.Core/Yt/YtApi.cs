@@ -442,7 +442,7 @@ public static class YtApi
     }
 
     /// <summary>La miniatura più grande trovata sotto <paramref name="root"/>.</summary>
-    internal static string ThumbOf(JsonNode? root)
+    public static string ThumbOf(JsonNode? root)
     {
         JsonArray? found = null;
         void Walk(JsonNode? n)
