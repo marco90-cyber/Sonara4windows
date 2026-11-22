@@ -21,7 +21,12 @@ jobs:
       - name: Test (Sonara.Core)
         shell: pwsh
         run: |
-          if (Test-Path tests/Sonara.Core.Tests) { dotnet test tests/Sonara.Core.Tests -c Release }
+          dotnet test tests/Sonara.Core.Tests -c Release --filter "Category!=Live"
+
+      - name: Prove dal vivo (YouTube Music, testi, flussi)
+        continue-on-error: true
+        shell: pwsh
+        run: dotnet test tests/Sonara.Core.Tests -c Release --filter "Category=Live" --logger "console;verbosity=detailed"
 
       - name: Publish app
         shell: pwsh
