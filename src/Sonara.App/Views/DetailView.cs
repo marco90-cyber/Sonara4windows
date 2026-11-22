@@ -40,11 +40,16 @@ public sealed class DetailView : UserControl
             else if (_e.Kind == Kind.Artists) d = await YtApi.ArtistAsync(_e.BrowseId, ct);
             else if (PlaylistImport.RefOf(_e.BrowseId) is { } r && !_e.BrowseId.StartsWith("imp:"))
             {
-                var prog = new ImportProgress { HorizontalAlignment = HorizontalAlignment.Center };
-                _wait.Children.Clear(); _wait.Children.Add(prog);
-                var f = await PlaylistImport.ImportAsync(r, null, null, (meta, found, dn, tt) => _a.RunUi(() => prog.Set(meta.Name, dn, tt)), ct);
-                _e = _e with { Title = f.Meta.Name, Thumb = f.Meta.Cover.Length > 0 ? f.Meta.Cover : _e.Thumb, Subtitle = PlaylistImport.Subtitle(r.Source, f.Tracks.Count, f.Total) };
-                d = new Detail(f.Tracks, new());
+                var saved = _a.Imports.Find(r.ImportId);
+                if (saved == null)
+                {
+                    var prog = new ImportProgress { HorizontalAlignment = HorizontalAlignment.Center };
+                    _wait.Children.Clear(); _wait.Children.Add(prog);
+                    // aprire una playlist di un altro servizio la abbina e la salva: la volta dopo è già pronta
+                    saved = await _a.Runner.ImportPlaylistAsync(r, (meta, found, dn, tt) => _a.RunUi(() => prog.Set(meta.Name, dn, tt)));
+                }
+                _e = saved.Entry;
+                d = new Detail(saved.Tracks, new());
             }
             else
             {

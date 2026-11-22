@@ -54,8 +54,17 @@ public sealed class SearchView : UserControl
         {
             sp.Children.Add(K.T($"Playlist di {r.Source.Label()}", 22, Pal.Text, true));
             var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
-            row.Children.Add(K.Pill("Apri", () => Actions.OpenEntry(r.Placeholder()), false, K.Play));
-            row.Children.Add(K.Pill("Importa nella Home", () => ImportDialog.Start(r, XamlRoot), true, K.Download));
+            var saved = AppServices.I.Imports.Find(r.ImportId);
+            if (saved != null)
+            {
+                sp.Children.Add(K.T("Già importata e abbinata.", 13, Pal.Sub));
+                row.Children.Add(K.Pill("Apri", () => Actions.OpenEntry(saved.Entry), true, K.Play));
+            }
+            else
+            {
+                row.Children.Add(K.Pill("Apri", () => Actions.OpenEntry(r.Placeholder()), false, K.Play));
+                row.Children.Add(K.Pill("Importa nella Home", () => ImportDialog.Start(r, XamlRoot), true, K.Download));
+            }
             sp.Children.Add(row);
         }
         _area.Child = sp;
