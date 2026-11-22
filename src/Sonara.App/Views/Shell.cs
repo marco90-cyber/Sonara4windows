@@ -141,7 +141,7 @@ public sealed class Shell : UserControl
                 var g = new Grid { ColumnSpacing = 10 };
                 g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
                 g.ColumnDefinitions.Add(new ColumnDefinition());
-                g.Children.Add(K.Cover(e.Thumb, 36, 6, e.Kind == Kind.Artist));
+                g.Children.Add(K.Cover(e.Thumb, 36, 6, e.Kind == Kind.Artists));
                 var tx = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
                 tx.Children.Add(K.T(e.Title, 13, Pal.Text)); tx.Children.Add(K.T(e.Subtitle, 11, Pal.Sub));
                 Grid.SetColumn(tx, 1); g.Children.Add(tx);

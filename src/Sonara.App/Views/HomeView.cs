@@ -116,7 +116,7 @@ public sealed class HomeView : UserControl
     {
         var sp = new StackPanel { Margin = new Thickness(0, 24, 0, 0), Spacing = 6 };
         sp.Children.Add(K.T("Importa le tue playlist", 18, Pal.Text, true));
-        sp.Children.Add(K.T("Incolla il link di una playlist pubblica di Spotify, Deezer o YouTube nella barra di ricerca.", 13, Pal.Sub, 0));
+        sp.Children.Add(K.T("Incolla il link di una playlist pubblica di Spotify, Deezer o YouTube nella barra di ricerca.", 13, Pal.Sub, false, 0));
         var b = K.Pill("Importa una playlist", () => ImportDialog.Show(XamlRoot), false, K.Add);
         b.HorizontalAlignment = HorizontalAlignment.Left;
         sp.Children.Add(b);

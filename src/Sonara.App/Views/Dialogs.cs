@@ -14,7 +14,7 @@ public static class ImportDialog
     public static async void Show(XamlRoot root, string? text = null)
     {
         var box = new TextBox { PlaceholderText = "Link della playlist (Spotify, Deezer, YouTube)", Text = text ?? "", MinWidth = 420 };
-        var info = K.T("Solo playlist pubbliche. Spotify dà circa i primi 100 brani.", 12, Pal.Sub, 0);
+        var info = K.T("Solo playlist pubbliche. Spotify dà circa i primi 100 brani.", 12, Pal.Sub, false, 0);
         var sp = new StackPanel { Spacing = 10 };
         sp.Children.Add(box); sp.Children.Add(info);
         var d = new ContentDialog { XamlRoot = root, Title = "Importa una playlist", Content = sp, PrimaryButtonText = "Importa", CloseButtonText = "Annulla", DefaultButton = ContentDialogButton.Primary };

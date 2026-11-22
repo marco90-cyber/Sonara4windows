@@ -76,7 +76,7 @@ public sealed class LibraryView : UserControl
         var head = new StackPanel { Margin = new Thickness(28, 4, 28, 8), Spacing = 8 };
         if (!d.HasFolder)
         {
-            head.Children.Add(K.T("Scegli la cartella dove salvare i brani scaricati: si ascoltano anche senza internet. Ritrovi tutto anche dopo una reinstallazione scegliendo la stessa cartella.", 13, Pal.Sub, 0));
+            head.Children.Add(K.T("Scegli la cartella dove salvare i brani scaricati: si ascoltano anche senza internet. Ritrovi tutto anche dopo una reinstallazione scegliendo la stessa cartella.", 13, Pal.Sub, false, 0));
             head.Children.Add(K.Pill("Scegli la cartella", async () => { if (await FolderPick.PickDownloadFolderAsync()) Build(); }, true, K.Folder));
             return head;
         }
@@ -101,9 +101,9 @@ public sealed class LibraryView : UserControl
         }
         row.Children.Add(K.Pill("Cambia cartella", async () => { if (await FolderPick.PickDownloadFolderAsync()) Build(); }, false, K.Folder));
         head.Children.Add(row);
-        if (tracks.Count == 0) { head.Children.Add(K.T("Nessun brano scaricato. Usa «Scarica» nel menu di un brano o in una playlist.", 13, Pal.Sub, 0)); return head; }
+        if (tracks.Count == 0) { head.Children.Add(K.T("Nessun brano scaricato. Usa «Scarica» nel menu di un brano o in una playlist.", 13, Pal.Sub, false, 0)); return head; }
         return new TrackList(tracks, head);
     }
 
-    private static UIElement Msg(string t) => new Grid { Children = { K.T(t, 14, Pal.Sub, 0) }, Margin = new Thickness(28, 24, 28, 0), VerticalAlignment = VerticalAlignment.Top };
+    private static UIElement Msg(string t) => new Grid { Children = { K.T(t, 14, Pal.Sub, false, 0) }, Margin = new Thickness(28, 24, 28, 0), VerticalAlignment = VerticalAlignment.Top };
 }

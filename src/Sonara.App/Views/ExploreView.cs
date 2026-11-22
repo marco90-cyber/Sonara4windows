@@ -48,6 +48,6 @@ public sealed class ExploreView : UserControl
             foreach (var c in charts) if (!ct.IsCancellationRequested) _body.Children.Add(Shelves.Make(c));
         }
         catch (OperationCanceledException) { }
-        catch (Exception e) { _body.Children.Add(K.T("Non riesco a caricare: " + e.Message, 13, Pal.Sub, 0)); }
+        catch (Exception e) { _body.Children.Add(K.T("Non riesco a caricare: " + e.Message, 13, Pal.Sub, false, 0)); }
     }
 }

@@ -49,7 +49,7 @@ public sealed class SearchView : UserControl
         _area.Child = K.Spinner();
         var r = await PlaylistImport.ParseResolvingAsync(_q);
         var sp = new StackPanel { Margin = new Thickness(28), Spacing = 12 };
-        if (r == null) sp.Children.Add(K.T("Link non riconosciuto. Incolla il link di una playlist di Spotify, Deezer o YouTube.", 14, Pal.Sub, 0));
+        if (r == null) sp.Children.Add(K.T("Link non riconosciuto. Incolla il link di una playlist di Spotify, Deezer o YouTube.", 14, Pal.Sub, false, 0));
         else
         {
             sp.Children.Add(K.T($"Playlist di {r.Source.Label()}", 22, Pal.Text, true));

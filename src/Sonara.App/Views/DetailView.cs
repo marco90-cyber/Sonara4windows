@@ -90,7 +90,7 @@ public sealed class DetailView : UserControl
         right.Children.Add(K.T(_e.Title, 36, Pal.Text, true, 2));
         var sub = _e.Subtitle;
         if (_tracks.Count > 0) sub = (sub.Length > 0 ? sub + " · " : "") + $"{_tracks.Count} brani";
-        if (sub.Length > 0) right.Children.Add(K.T(sub, 13, Pal.Sub, 0));
+        if (sub.Length > 0) right.Children.Add(K.T(sub, 13, Pal.Sub, false, 0));
         var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Margin = new Thickness(0, 10, 0, 0) };
         if (_tracks.Count > 0)
         {
