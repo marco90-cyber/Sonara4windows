@@ -95,6 +95,7 @@ public sealed class DetailView : UserControl
         if (_tracks.Count > 0)
         {
             row.Children.Add(K.Pill("Riproduci", () => _a.Player.PlayList(_tracks, 0), true, K.Play));
+            row.Children.Add(K.Pill("Controlla durate", () => DurationDialog.ShowAsync(_tracks, XamlRoot), false, K.Timer));
             row.Children.Add(K.Pill("Casuale", () => _a.Player.PlayList(_tracks, 0, true), false, K.Shuffle));
         }
         var saved = _a.Store.IsSaved(_e.BrowseId);

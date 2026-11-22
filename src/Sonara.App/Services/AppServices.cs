@@ -16,6 +16,7 @@ public sealed class AppServices
     public ImportStore Imports { get; }
     public ImportRunner Runner { get; }
     public YtOverrides Overrides { get; }
+    public AutoFix AutoFix { get; }
     public StreamResolver Resolver { get; }
     public DownloadManager Downloads { get; }
     public DspSettings Dsp { get; set; }
@@ -32,6 +33,7 @@ public sealed class AppServices
         Imports = new ImportStore();
         Runner = new ImportRunner(Imports);
         Overrides = new YtOverrides();
+        AutoFix = new AutoFix(Overrides) { Enabled = () => Settings.AutoFix };
         Resolver = new StreamResolver(Persist.CacheDir) { Quality = Settings.Quality };
         _ = Task.Run(() => { try { Resolver.Trim(Settings.CacheMaxMb * 1024L * 1024L); } catch { } });
         Downloads = new DownloadManager(Settings, Resolver);

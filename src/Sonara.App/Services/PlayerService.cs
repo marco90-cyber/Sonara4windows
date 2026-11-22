@@ -79,6 +79,7 @@ public sealed class PlayerService : IDisposable
     {
         if (list.Count == 0) return;
         _items = list.ToList();
+        foreach (var x in _items) _a.AutoFix.Consider(x);
         Shuffle = shuffle;
         BuildOrder(shuffle ? _rnd.Next(_items.Count) : Math.Clamp(start, 0, _items.Count - 1));
         QueueChanged?.Invoke();
@@ -119,6 +120,7 @@ public sealed class PlayerService : IDisposable
     public void AddToQueue(Track t)
     {
         if (_items.Count == 0) { PlayOne(t); return; }
+        _a.AutoFix.Consider(t);
         _items.Add(t);
         _order.Add(_items.Count - 1);
         QueueChanged?.Invoke();
@@ -127,6 +129,7 @@ public sealed class PlayerService : IDisposable
     public void PlayNext(Track t)
     {
         if (_items.Count == 0) { PlayOne(t); return; }
+        _a.AutoFix.Consider(t);
         _items.Add(t);
         _order.Insert(Math.Min(_pos + 1, _order.Count), _items.Count - 1);
         QueueChanged?.Invoke();
@@ -134,7 +137,7 @@ public sealed class PlayerService : IDisposable
 
     public void AddRange(IEnumerable<Track> l)
     {
-        foreach (var t in l) { _items.Add(t); _order.Add(_items.Count - 1); }
+        foreach (var t in l) { _a.AutoFix.Consider(t); _items.Add(t); _order.Add(_items.Count - 1); }
         QueueChanged?.Invoke();
     }
 

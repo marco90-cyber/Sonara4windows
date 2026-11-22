@@ -23,6 +23,8 @@ public sealed class SettingsView : UserControl
         r.Children.Add(Row("Qualità audio", q));
         r.Children.Add(K.Tgl(S.ExclusiveOutput, v => { S.ExclusiveOutput = v; S.Save(); }, "Uscita esclusiva WASAPI (bit-perfect, se supportata)"));
 
+        r.Children.Add(K.Tgl(S.AutoFix, v => { S.AutoFix = v; S.Save(); }, "Correzione brani (sostituisce in automatico l'audio con durata sbagliata)"));
+
         r.Children.Add(Sec("Aspetto"));
         r.Children.Add(K.Tgl(S.LightTheme, v => { S.LightTheme = v; S.Save(); _ = K.Info(XamlRoot, "Tema", "Il tema cambia al prossimo avvio di Sonara."); }, "Tema chiaro"));
 
