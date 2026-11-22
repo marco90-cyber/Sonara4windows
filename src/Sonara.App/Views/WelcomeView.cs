@@ -34,22 +34,34 @@ public sealed class WelcomeView : UserControl
         {
             case 0:
                 Title("Benvenuto in Sonara", "Musica da YouTube, solo audio, senza account. Cerca, ascolta, salva le playlist e scarica per ascoltare offline.");
-                s.Children.Add(K.T("♥ preferiti   ⬇ scarica   ⇄ cambia sorgente   ⟳ playlist importate", 12, Pal.Sub, false, 3));
                 break;
             case 1:
+                Title("Legenda dei simboli", "Cosa significano le icone che trovi nell'app.");
+                foreach (var (g, t) in new[] { (K.Heart, "Mi piace: salva il brano tra i preferiti"), (K.ThumbDown, "Non mi piace: non lo proponiamo più (non salta il brano)"), (K.Download, "Scarica per ascoltare offline"), (K.DownDone, "Brano già scaricato"), (K.Swap, "Cambia sorgente: scegli un'altra versione del brano"), (K.Bookmark, "Salva playlist, album o artista nella libreria"), (K.Refresh, "Aggiorna una playlist importata") })
+                {
+                    var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
+                    row.Children.Add(K.Icon(g, 16, Pal.Accent)); row.Children.Add(K.T(t, 13, Pal.Text, false, 0));
+                    s.Children.Add(row);
+                }
+                break;
+            case 2:
                 Title("Dove salvare i download?", "Scegli una cartella per i brani scaricati. Puoi cambiarla in seguito dalle Impostazioni.");
                 var f = K.T(string.IsNullOrEmpty(_a.Settings.DownloadFolder) ? "Nessuna cartella scelta" : _a.Settings.DownloadFolder, 12, Pal.Sub, false, 2);
                 s.Children.Add(f);
                 s.Children.Add(K.Pill("Scegli cartella", async () => { if (await FolderPick.PickDownloadFolderAsync()) f.Text = _a.Settings.DownloadFolder; }, false, K.Folder));
                 break;
-            case 2:
+            case 3:
+                Title("Correzione brani", "Sistema in automatico titolo e artista dei brani (esclude bootleg, cover, remix e simili). Di base è spenta.");
+                s.Children.Add(K.Tgl(_a.Settings.AutoFix, v => _a.Settings.AutoFix = v, "Attiva la correzione brani"));
+                break;
+            case 4:
                 Title("Il tuo paese", "Serve per le classifiche e i consigli.");
                 var c = new ComboBox { ItemsSource = Countries.Codes.Select(Countries.Name).ToList(), Width = 280 };
                 c.SelectedIndex = Math.Max(0, Array.IndexOf(Countries.Codes, _a.Settings.EffectiveCountry()));
                 c.SelectionChanged += (_, _) => { if (c.SelectedIndex >= 0) { _a.Settings.Region = Countries.Codes[c.SelectedIndex]; } };
                 s.Children.Add(c);
                 break;
-            case 3:
+            case 5:
                 Title("Che musica ti piace?", "Scegli i generi: Sonara parte da qui per i consigli.");
                 var chosen = new HashSet<string>((_a.Settings.FavGenres ?? "").Split('|', StringSplitOptions.RemoveEmptyEntries));
                 var wrap = new ItemsControl();
@@ -75,9 +87,33 @@ public sealed class WelcomeView : UserControl
                 s.Children.Add(rows);
                 break;
         }
+        if (_page == 6)
+        {
+            Title("I tuoi artisti", "Cerca e scegli gli artisti che ascolti di più (facoltativo).");
+            var sel = _a.Settings.FavArtists;
+            var chips = new StackPanel { Spacing = 6 };
+            void Rebuild() { chips.Children.Clear(); foreach (var e in sel.ToList()) { var ee = e; chips.Children.Add(K.Chip("✓ " + ee.Title, true, () => { sel.RemoveAll(x => x.BrowseId == ee.BrowseId); Rebuild(); })); } }
+            var res = new StackPanel { Spacing = 4 };
+            var box = new AutoSuggestBox { PlaceholderText = "Cerca un artista", Width = 360, HorizontalAlignment = HorizontalAlignment.Left };
+            box.QuerySubmitted += async (b, e) =>
+            {
+                res.Children.Clear();
+                try
+                {
+                    var l = await Sonara.Core.Yt.YtApi.SearchEntriesAsync(b.Text, Sonara.Core.Yt.Kind.Artists, 1);
+                    foreach (var a in l.Take(6))
+                    {
+                        var aa = a;
+                        res.Children.Add(K.Clickable(K.T(aa.Title, 13, Pal.Text), () => { if (!sel.Any(x => x.BrowseId == aa.BrowseId)) sel.Add(aa); Rebuild(); }, null, null, 8, new Thickness(8)));
+                    }
+                }
+                catch { res.Children.Add(K.T("Ricerca non riuscita", 12, Pal.Sub)); }
+            };
+            s.Children.Add(box); s.Children.Add(res); s.Children.Add(chips); Rebuild();
+        }
         var nav = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0) };
         if (_page > 0) nav.Children.Add(K.Pill("Indietro", () => { _page--; Show(); }, false));
-        var last = _page == 3;
+        var last = _page == 6;
         nav.Children.Add(K.Pill(last ? "Inizia" : "Avanti", () =>
         {
             if (last) { _a.Settings.WelcomeDone = true; _a.Settings.Save(); _done(); }

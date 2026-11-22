@@ -102,6 +102,30 @@ public sealed class Shell : UserControl
             if (Nav.CurrentKey == "") Nav.Go("home", () => new HomeView());
         };
         BuildNav(); BuildLists();
+        StartAutoRefresh();
+    }
+
+    private async void AutoRefreshTick()
+    {
+        try
+        {
+            var st = _a.Settings;
+            if (!st.ImportAutoRefresh || _a.Runner.Active || _a.Imports.All.Count == 0) return;
+            var age = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - _a.Imports.LastCheck;
+            if (age < st.ImportRefreshHours * 3600_000L) return;
+            var changes = await _a.Runner.RefreshAllAsync();
+            var any = changes.Where(c => c.Any).ToList();
+            if (st.ImportNotify && any.Count > 0 && XamlRoot != null)
+                _a.RunUi(() => _ = K.Info(XamlRoot, "Playlist aggiornate", string.Join("\n", any.Select(c => $"{c.Title}: +{c.Added} −{c.Removed}"))));
+        }
+        catch { }
+    }
+
+    private void StartAutoRefresh()
+    {
+        var t = new DispatcherTimer { Interval = TimeSpan.FromMinutes(30) };
+        t.Tick += (_, _) => AutoRefreshTick();
+        Loaded += (_, _) => { t.Start(); AutoRefreshTick(); };
     }
 
     private void OnNav(UIElement view, string key)

@@ -22,7 +22,6 @@ public sealed class SettingsView : UserControl
         q.SelectionChanged += (_, _) => { S.Quality = q.SelectedIndex; _a.Resolver.Quality = q.SelectedIndex; S.Save(); };
         r.Children.Add(Row("Qualità audio", q));
         r.Children.Add(K.Tgl(S.ExclusiveOutput, v => { S.ExclusiveOutput = v; S.Save(); }, "Uscita esclusiva WASAPI (bit-perfect, se supportata)"));
-        r.Children.Add(K.Tgl(S.Normalize, v => { S.Normalize = v; S.Save(); }, "Normalizza il volume"));
 
         r.Children.Add(Sec("Aspetto"));
         r.Children.Add(K.Tgl(S.LightTheme, v => { S.LightTheme = v; S.Save(); _ = K.Info(XamlRoot, "Tema", "Il tema cambia al prossimo avvio di Sonara."); }, "Tema chiaro"));
@@ -40,6 +39,11 @@ public sealed class SettingsView : UserControl
 
         r.Children.Add(Sec("Playlist importate"));
         r.Children.Add(K.Tgl(S.ImportAutoRefresh, v => { S.ImportAutoRefresh = v; S.Save(); }, "Aggiorna automaticamente"));
+        var hrs = new ComboBox { ItemsSource = new[] { "Ogni 6 ore", "Ogni 12 ore", "Ogni giorno", "Ogni 3 giorni", "Ogni settimana" }, Width = 200 };
+        var hv = new[] { 6, 12, 24, 72, 168 };
+        hrs.SelectedIndex = Math.Max(0, Array.IndexOf(hv, S.ImportRefreshHours));
+        hrs.SelectionChanged += (_, _) => { if (hrs.SelectedIndex >= 0) { S.ImportRefreshHours = hv[hrs.SelectedIndex]; S.Save(); } };
+        r.Children.Add(Row("Frequenza", hrs));
         r.Children.Add(K.Tgl(S.ImportNotify, v => { S.ImportNotify = v; S.Save(); }, "Avvisami delle novità"));
 
         r.Children.Add(Sec("Cache"));
