@@ -1,0 +1,43 @@
+<ResourceDictionary
+    x:Class="Sonara.App.Templates"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Sonara.App">
+
+    <DataTemplate x:Key="TrackRow" x:DataType="local:TrackRowVm">
+        <Grid Height="58" ColumnSpacing="10" Padding="6,0,4,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="34"/>
+                <ColumnDefinition Width="44"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="{x:Bind Number}" Visibility="{x:Bind NumberVis, Mode=OneWay}"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.6" FontSize="13"/>
+            <FontIcon Grid.Column="0" Glyph="&#xE767;" FontSize="14" Foreground="#1ED760"
+                      Visibility="{x:Bind PlayingVis, Mode=OneWay}" HorizontalAlignment="Center"/>
+            <Border Grid.Column="1" Width="44" Height="44" CornerRadius="6" Background="#22888888">
+                <Border.Child>
+                    <Image Source="{x:Bind Cover}" Stretch="UniformToFill"/>
+                </Border.Child>
+            </Border>
+            <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
+                <TextBlock Text="{x:Bind Title}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                           Foreground="{x:Bind TitleBrush, Mode=OneWay}"/>
+                <TextBlock Text="{x:Bind Artist}" FontSize="12" Opacity="0.65" TextTrimming="CharacterEllipsis"/>
+            </StackPanel>
+            <FontIcon Grid.Column="3" Glyph="&#xE73E;" FontSize="14" Foreground="#1ED760"
+                      Visibility="{x:Bind DownVis, Mode=OneWay}" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="4" Text="{x:Bind Duration}" FontSize="12" Opacity="0.65" VerticalAlignment="Center" MinWidth="40" TextAlignment="Right"/>
+            <Button Grid.Column="5" Command="{x:Bind FavCmd}" Background="Transparent" BorderThickness="0" Padding="9">
+                <FontIcon Glyph="{x:Bind FavGlyph, Mode=OneWay}" FontSize="15" Foreground="{x:Bind FavBrush, Mode=OneWay}"/>
+            </Button>
+            <Button Grid.Column="6" Command="{x:Bind MoreCmd}" Background="Transparent" BorderThickness="0" Padding="9">
+                <FontIcon Glyph="&#xE712;" FontSize="15" Opacity="0.75"/>
+            </Button>
+        </Grid>
+    </DataTemplate>
+</ResourceDictionary>
