@@ -26,6 +26,8 @@ public sealed class SettingsView : UserControl
         r.Children.Add(Sec("Aspetto"));
         r.Children.Add(K.Tgl(S.LightTheme, v => { S.LightTheme = v; S.Save(); _ = K.Info(XamlRoot, "Tema", "Il tema cambia al prossimo avvio di Sonara."); }, "Tema chiaro"));
 
+        r.Children.Add(K.Tgl(S.CheckUpdates, v => { S.CheckUpdates = v; S.Save(); }, "Controlla gli aggiornamenti all'avvio"));
+
         r.Children.Add(Sec("Paese"));
         var c = new ComboBox { ItemsSource = Countries.Codes.Select(Countries.Name).ToList(), Width = 260 };
         c.SelectedIndex = Math.Max(0, Array.IndexOf(Countries.Codes, S.EffectiveCountry()));

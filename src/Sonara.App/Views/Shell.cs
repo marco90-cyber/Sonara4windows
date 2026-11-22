@@ -121,11 +121,34 @@ public sealed class Shell : UserControl
         catch { }
     }
 
+    private async void CheckUpdate()
+    {
+        try
+        {
+            if (!_a.Settings.CheckUpdates) return;
+            using var h = new System.Net.Http.HttpClient();
+            h.DefaultRequestHeaders.UserAgent.ParseAdd("Sonara");
+            var js = await h.GetStringAsync("https://api.github.com/repos/marco90-cyber/Sonara4windows/releases/latest");
+            var n = System.Text.Json.Nodes.JsonNode.Parse(js);
+            var tag = n?["tag_name"]?.GetValue<string>()?.TrimStart('v');
+            var cur = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+            if (tag == null || !Version.TryParse(tag, out var nv) || cur == null) return;
+            if (nv.Revision < 0 && nv.Build >= 0) nv = new Version(nv.Major, nv.Minor, nv.Build, 0);
+            if (nv <= cur) return;
+            _a.RunUi(async () =>
+            {
+                if (await K.Confirm(XamlRoot, "Aggiornamento disponibile", $"È uscita la versione {tag}. Vuoi scaricarla?", "Scarica"))
+                    await Windows.System.Launcher.LaunchUriAsync(new Uri("https://github.com/marco90-cyber/Sonara4windows/releases/latest"));
+            });
+        }
+        catch { }
+    }
+
     private void StartAutoRefresh()
     {
         var t = new DispatcherTimer { Interval = TimeSpan.FromMinutes(30) };
         t.Tick += (_, _) => AutoRefreshTick();
-        Loaded += (_, _) => { t.Start(); AutoRefreshTick(); };
+        Loaded += (_, _) => { t.Start(); AutoRefreshTick(); CheckUpdate(); };
     }
 
     private void OnNav(UIElement view, string key)

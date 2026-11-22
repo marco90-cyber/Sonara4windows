@@ -9,6 +9,8 @@ namespace Sonara.App;
 
 public sealed partial class MainWindow : Window
 {
+    private MediaKeys? _keys;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -22,6 +24,7 @@ public sealed partial class MainWindow : Window
             tb.ButtonBackgroundColor = Pal.Bg.Color; tb.ButtonInactiveBackgroundColor = Pal.Bg.Color;
         }
         RootGrid.Background = Pal.Bg;
+        try { _keys = new MediaKeys(FolderPick.Hwnd); } catch { }
         var a = AppServices.I;
         if (a.Settings.WelcomeDone) RootGrid.Children.Add(new Shell());
         else RootGrid.Children.Add(new WelcomeView(() => { RootGrid.Children.Clear(); RootGrid.Children.Add(new Shell()); }));

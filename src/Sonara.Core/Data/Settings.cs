@@ -19,6 +19,7 @@ public sealed class AppSettings
     public string DownloadFolder { get; set; } = "";
     public bool AutoFix { get; set; }
     public bool LightTheme { get; set; }
+    public bool CheckUpdates { get; set; } = true;
     public bool ExclusiveOutput { get; set; }
     public bool Normalize { get; set; }
     public double Volume { get; set; } = 0.8;

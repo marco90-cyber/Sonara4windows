@@ -30,7 +30,7 @@ jobs:
 
       - name: Publish app
         shell: pwsh
-        run: dotnet publish src/Sonara.App/Sonara.App.csproj -c Release -r win-x64 -p:Platform=x64 -o publish
+        run: dotnet publish src/Sonara.App/Sonara.App.csproj -c Release -r win-x64 -p:Platform=x64 -p:Version=0.1.${{ github.run_number }} -o publish
 
       - name: Avvio dell'app (smoke test)
         shell: pwsh
