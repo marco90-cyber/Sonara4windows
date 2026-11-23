@@ -95,9 +95,11 @@ public sealed class NowPlayingPanel : UserControl
         _next.Children.Clear();
         var up = _a.Player.Upcoming.Take(5).ToList();
         if (up.Count == 0) { _next.Children.Add(K.T("La coda è vuota", 12, Pal.Sub)); return; }
-        var all = _a.Player.Queue.ToList();
+        var first = _a.Player.Index + 1;   // posizione nell'ordine di riproduzione (non per VideoId: i doppioni confondono)
+        var n = 0;
         foreach (var t in up)
         {
+            var idx = first + n++;
             var row = new Grid { ColumnSpacing = 10, Height = 50 };
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             row.ColumnDefinitions.Add(new ColumnDefinition());
@@ -105,7 +107,6 @@ public sealed class NowPlayingPanel : UserControl
             var tx = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
             tx.Children.Add(K.T(t.Title, 13, Pal.Text, true)); tx.Children.Add(K.T(t.Artist, 11, Pal.Sub));
             Grid.SetColumn(tx, 1); row.Children.Add(tx);
-            var idx = all.FindIndex(x => x.VideoId == t.VideoId);
             _next.Children.Add(K.Clickable(row, () => _a.Player.JumpTo(idx), radius: 8, pad: new Thickness(4, 0, 4, 0)));
         }
     }

@@ -80,7 +80,9 @@ public sealed class PlayerService : IDisposable
         if (list.Count == 0) return;
         _items = list.ToList();
         foreach (var x in _items) _a.AutoFix.Consider(x);
-        Shuffle = shuffle;
+        // con "Casuale" attivo anche un brano scelto a mano parte dentro l'ordine casuale
+        var wasShuffle = Shuffle;
+        Shuffle = shuffle || wasShuffle;
         BuildOrder(shuffle ? _rnd.Next(_items.Count) : Math.Clamp(start, 0, _items.Count - 1));
         QueueChanged?.Invoke();
         _ = StartCurrentAsync();
