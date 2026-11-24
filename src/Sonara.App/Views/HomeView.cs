@@ -115,7 +115,7 @@ public sealed class HomeView : UserControl
         foreach (var q in s)
         {
             var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
-            row.Children.Add(K.Icon("", 13, Pal.Sub));
+            row.Children.Add(K.Icon(K.History, 13, Pal.Sub));
             row.Children.Add(K.T(q, 14, Pal.Text));
             sp.Children.Add(K.Clickable(row, () => Nav.Go("search:" + q, () => new SearchView(q)), pad: new Thickness(6, 6, 12, 6)));
         }

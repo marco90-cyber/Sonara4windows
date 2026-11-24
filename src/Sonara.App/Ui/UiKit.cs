@@ -15,9 +15,9 @@ public static class K
     public const string Home = "", Search = "", Library = "", Heart = "", HeartFill = "", Play = "", Pause = "",
         Next = "", Prev = "", Shuffle = "", Repeat = "", RepeatOne = "", Volume = "", Mute = "",
         Back = "", Forward = "", Bell = "", Settings = "", Download = "", DownDone = "", More = "", Add = "",
-        ThumbUp = "", ThumbDown = "", Queue = "", Lyrics = "", Eq = "", Mic = "", Bookmark = "",
-        BookmarkFill = "", Refresh = "", Close = "", Folder = "", Person = "", Album = "", Music = "",
-        Compass = "", Chevron = "", Check = "", Delete = "", Radio = "", Swap = "", Timer = "", Full = "";
+        ThumbUp = "", ThumbDown = "", Queue = "", Lyrics = "\uE90B", Eq = "", Mic = "", Bookmark = "",
+        BookmarkFill = "\uE8A4", Refresh = "", Close = "", Folder = "", Person = "", Album = "", Music = "",
+        Compass = "", Chevron = "", Check = "", Delete = "", Radio = "", Swap = "", Timer = "", Full = "", History = "\uE81C";
 
     public static Brush Brush(string hex)
     {
