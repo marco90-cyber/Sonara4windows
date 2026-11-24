@@ -24,7 +24,7 @@ public class TasteTests
         var skips = new Dictionary<string, int> { ["a"] = 5, ["h"] = 1 };
         var w = Taste.Weights(plays, new[] { T("h", "Y") }, Array.Empty<Track>(), skips);
         Assert.Equal(4.0, w["a"].Weight);   // 5 ascolti (tetto) - 1 (tetto dei salti)
-        Assert.Equal(0.0, w["h"].Weight);   // in cronologia ma saltato
+        Assert.Equal(-0.5, w["h"].Weight);  // in cronologia (0 perché saltato) più il salto
     }
 
     [Fact]
