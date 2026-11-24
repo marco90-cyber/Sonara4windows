@@ -260,13 +260,13 @@ public sealed class YtStore
             Dislikes = Dislikes.Concat(dis).ToList();
             // playlist tue: nuove per id; se c'è già, si uniscono i brani
             var newLists = 0;
-            var cur = MyPlaylists.ToDictionary(p => p.Id);
+            var lists = MyPlaylists.ToDictionary(p => p.Id);
             foreach (var np in d.Playlists)
             {
-                if (!cur.TryGetValue(np.Id, out var c)) { cur[np.Id] = np; newLists++; }
-                else cur[np.Id] = c with { Items = c.Items.Concat(np.Items.Where(i => c.Items.All(x => x.VideoId != i.VideoId))).ToList() };
+                if (!lists.TryGetValue(np.Id, out var c)) { lists[np.Id] = np; newLists++; }
+                else lists[np.Id] = c with { Items = c.Items.Concat(np.Items.Where(i => c.Items.All(x => x.VideoId != i.VideoId))).ToList() };
             }
-            MyPlaylists = d.Playlists.Select(p => p.Id).Concat(MyPlaylists.Select(p => p.Id)).Distinct().Select(id => cur[id]).ToList();
+            MyPlaylists = d.Playlists.Select(p => p.Id).Concat(MyPlaylists.Select(p => p.Id)).Distinct().Select(id => lists[id]).ToList();
             foreach (var (k, v) in d.Skips) Skips[k] = Math.Max(Skips.GetValueOrDefault(k), v);
             foreach (var (k, v) in d.TrackGenres) TrackGenres.TryAdd(k, v);
             foreach (var (k, v) in d.ArtistGenres) ArtistGenres.TryAdd(k, v);

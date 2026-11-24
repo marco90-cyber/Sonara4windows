@@ -59,6 +59,19 @@ public sealed class AppSettings
         Changed?.Invoke();
     }
 
+    /// <summary>Interruttori e scelte tornano ai valori di partenza; restano cartella dei download, paese, benvenuto e gusti scelti.</summary>
+    public void ResetPreferences()
+    {
+        var d = new AppSettings
+        {
+            DownloadFolder = DownloadFolder, Region = Region, WelcomeDone = WelcomeDone, FavGenres = FavGenres, FavArtists = FavArtists,
+            FavArtistsSynced = FavArtistsSynced, SettingsVersion = 2,
+        };
+        foreach (var p in typeof(AppSettings).GetProperties().Where(p => p.CanWrite && p.GetIndexParameters().Length == 0))
+            p.SetValue(this, p.GetValue(d));
+        Save();
+    }
+
     /// <summary>Applica le impostazioni di un backup (testo JSON) a queste.</summary>
     public void ImportFrom(string json)
     {

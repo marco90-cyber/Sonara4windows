@@ -86,6 +86,15 @@ public sealed class DetailView : UserControl
         _root.Children.Add(list);
     }
 
+    private static UIElement FollowContent(bool on)
+    {
+        var fg = on ? Pal.Accent : Pal.Text;
+        var r = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+        r.Children.Add(K.Icon(on ? K.BookmarkFill : K.Bookmark, 14, fg));
+        r.Children.Add(K.T(on ? "Seguito" : "Segui", 14, fg, true));
+        return r;
+    }
+
     private UIElement BuildHeader()
     {
         var round = _e.Kind == Kind.Artists;
@@ -110,9 +119,24 @@ public sealed class DetailView : UserControl
         var saved = _a.Store.IsSaved(_e.BrowseId);
         if (!_e.BrowseId.StartsWith("cat:"))
         {
-            var bm = K.IconBtn(saved ? K.BookmarkFill : K.Bookmark, () => { }, 18, "Salva nella libreria", saved ? Pal.Accent : Pal.Text, 40);
-            bm.Tapped += (_, _) => { var now = _a.Store.ToggleSaved(_e); ((FontIcon)bm.Child).Glyph = now ? K.BookmarkFill : K.Bookmark; ((FontIcon)bm.Child).Foreground = now ? Pal.Accent : Pal.Text; };
-            row.Children.Add(bm);
+            if (_e.Kind == Kind.Artists)
+            {
+                // per gli artisti il segnalibro è «Segui»
+                Border? follow = null;
+                follow = K.Pill(saved ? "Seguito" : "Segui", () =>
+                {
+                    var now = _a.Store.ToggleSaved(_e);
+                    follow!.Child = FollowContent(now);
+                }, false);
+                follow.Child = FollowContent(saved);
+                row.Children.Add(follow);
+            }
+            else
+            {
+                var bm = K.IconBtn(saved ? K.BookmarkFill : K.Bookmark, () => { }, 18, "Salva nella libreria", saved ? Pal.Accent : Pal.Text, 40);
+                bm.Tapped += (_, _) => { var now = _a.Store.ToggleSaved(_e); ((FontIcon)bm.Child).Glyph = now ? K.BookmarkFill : K.Bookmark; ((FontIcon)bm.Child).Foreground = now ? Pal.Accent : Pal.Text; };
+                row.Children.Add(bm);
+            }
         }
         if (_tracks.Count > 0)
             row.Children.Add(K.IconBtn(K.Download, () => Actions.Download(_e.Title, _tracks, XamlRoot), 18, "Scarica", null, 40));
@@ -136,10 +160,11 @@ public sealed class DetailView : UserControl
         }
         else if (PlaylistImport.RefOf(_e.BrowseId) is { } rf && !_e.BrowseId.StartsWith("imp:"))
             row.Children.Add(K.Pill("Importa nella Home", () => ImportDialog.Start(rf, XamlRoot), false, K.Add));
-        if (_e.Kind == Kind.Artists)
+        if (_tracks.Count > 0)
             row.Children.Add(K.IconBtn(K.Radio, async () =>
             {
-                try { var r = await YtApi.RadioAsync(_tracks.FirstOrDefault()?.VideoId ?? ""); if (r.Count > 0) _a.Player.PlayList(r, 0); } catch (Exception) { }
+                // radio da una playlist, un album o un artista: parte dal primo brano
+                try { var r = await YtApi.RadioAsync(_tracks.First().VideoId); if (r.Count > 0) _a.Player.PlayList(r, 0); } catch (Exception) { }
             }, 18, "Radio", null, 40));
         right.Children.Add(row);
         Grid.SetColumn(right, 1);

@@ -17,7 +17,7 @@ public static class TrackMenu
         return i;
     }
 
-    public static void Show(Track t, FrameworkElement anchor, IList<Track>? context = null, Action? onRemove = null)
+    public static void Show(Track t, FrameworkElement anchor, IList<Track>? context = null, Action? onRemove = null, string removeLabel = "Rimuovi dalla coda")
     {
         var a = AppServices.I;
         var f = new MenuFlyout();
@@ -29,6 +29,10 @@ public static class TrackMenu
         {
             try { var r = await YtApi.RadioAsync(a.Overrides.Target(t.VideoId)); if (r.Count > 0) a.Player.PlayList(r, 0); } catch (Exception) { }
         }));
+        var add = new MenuFlyoutSubItem { Text = "Aggiungi a una playlist", Icon = new FontIcon { Glyph = K.Add } };
+        add.Items.Add(Item("Nuova playlist…", K.Add, () => MyPlaylists.AddToNew(t, anchor.XamlRoot)));
+        foreach (var pl in a.Store.MyPlaylists.Take(15)) { var id = pl.Id; add.Items.Add(Item(pl.Name, K.Queue, () => MyPlaylists.AddTo(id, t, anchor.XamlRoot))); }
+        f.Items.Add(add);
         f.Items.Add(new MenuFlyoutSeparator());
         var fav = a.Store.IsFavorite(t.VideoId);
         f.Items.Add(Item(fav ? "Togli dai preferiti" : "Aggiungi ai preferiti", fav ? K.HeartFill : K.Heart, () => a.Store.ToggleFavorite(t)));
@@ -42,7 +46,7 @@ public static class TrackMenu
         f.Items.Add(Item("Vai all'artista", K.Person, () => Actions.OpenArtistByName(t.Artist)));
         f.Items.Add(Item("Cambia sorgente…", K.Swap, () => _ = SourceDialog.ShowAsync(t, anchor.XamlRoot)));
         if (a.Overrides.Has(t.VideoId)) f.Items.Add(Item("Ripristina la sorgente originale", K.Refresh, () => a.Overrides.Remove(t.VideoId)));
-        if (onRemove != null) { f.Items.Add(new MenuFlyoutSeparator()); f.Items.Add(Item("Rimuovi dalla coda", K.Close, onRemove)); }
+        if (onRemove != null) { f.Items.Add(new MenuFlyoutSeparator()); f.Items.Add(Item(removeLabel, K.Close, onRemove)); }
         f.ShowAt(anchor);
     }
 }

@@ -177,7 +177,7 @@ public sealed class Shell : UserControl
         }
         Item(K.Home, "Home", "home", () => new HomeView());
         Item(K.Compass, "Esplora", "explore", () => new ExploreView());
-        Item(K.Library, "Libreria", "library", () => new LibraryView());
+        Item(K.Library, "Raccolta", "library", () => new LibraryView());
     }
 
     private void BuildLists()
@@ -197,6 +197,18 @@ public sealed class Shell : UserControl
                 _lists.Children.Add(K.Clickable(g, () => Actions.OpenEntry(e), null, null, 8, new Thickness(6)));
             }
             _lists.Children.Add(K.Clickable(new TextBlock { Text = $"♥  Brani preferiti ({_a.Store.Favorites.Count})", FontSize = 13, Foreground = Pal.Text }, () => Nav.Go("library", () => new LibraryView()), null, null, 8, new Thickness(8, 10, 8, 10)));
+            foreach (var p in _a.Store.MyPlaylists)
+            {
+                var pp = p;
+                var g = new Grid { ColumnSpacing = 10 };
+                g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                g.ColumnDefinitions.Add(new ColumnDefinition());
+                g.Children.Add(K.Cover(pp.Items.FirstOrDefault()?.Cover, 36, 6));
+                var tx = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+                tx.Children.Add(K.T(pp.Name, 13, Pal.Text)); tx.Children.Add(K.T($"Playlist tua · {pp.Items.Count} brani", 11, Pal.Sub));
+                Grid.SetColumn(tx, 1); g.Children.Add(tx);
+                _lists.Children.Add(K.Clickable(g, () => Nav.Go("library:" + pp.Id, () => new LibraryView("Playlist", pp.Id)), null, null, 8, new Thickness(6)));
+            }
             foreach (var i in _a.Imports.All) Row(i.Entry);
             foreach (var e in _a.Store.Saved) Row(e);
         });

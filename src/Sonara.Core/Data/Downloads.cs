@@ -160,6 +160,13 @@ public sealed class DownloadManager
         Changed?.Invoke();
     }
 
+    /// <summary>Dimentica l'elenco dei brani scaricati; i file audio restano nella cartella.</summary>
+    public void ForgetAll()
+    {
+        lock (_gate) { Items = new(); SaveIndex(); }
+        Changed?.Invoke();
+    }
+
     // ---- copia di riserva
 
     /// <summary>Scrive nella cartella dei download la copia di riserva (preferiti, cronologia, salvati, importate).</summary>

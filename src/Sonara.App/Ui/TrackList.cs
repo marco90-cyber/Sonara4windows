@@ -12,11 +12,12 @@ public sealed class TrackList : ListView
     private readonly List<TrackRowVm> _rows = new();
     private readonly List<Track> _tracks;
     private readonly Action<Track>? _onRemove;
+    private readonly string _removeLabel;
 
-    public TrackList(IList<Track> tracks, UIElement? header = null, bool numbered = true, Action<Track>? onRemove = null)
+    public TrackList(IList<Track> tracks, UIElement? header = null, bool numbered = true, Action<Track>? onRemove = null, string removeLabel = "Rimuovi dalla coda")
     {
         _tracks = tracks.ToList();
-        _onRemove = onRemove;
+        _onRemove = onRemove; _removeLabel = removeLabel;
         ItemTemplate = (DataTemplate)Tpl["TrackRow"];
         SelectionMode = ListViewSelectionMode.None;
         IsItemClickEnabled = true;
@@ -48,6 +49,6 @@ public sealed class TrackList : ListView
     private void OnMore(TrackRowVm vm)
     {
         var anchor = ContainerFromItem(vm) as FrameworkElement ?? this;
-        TrackMenu.Show(vm.Track, anchor, _tracks, _onRemove == null ? null : () => _onRemove(vm.Track));
+        TrackMenu.Show(vm.Track, anchor, _tracks, _onRemove == null ? null : () => _onRemove(vm.Track), _removeLabel);
     }
 }
