@@ -17,6 +17,7 @@ public sealed class NowPlayingPanel : UserControl
     private readonly FontIcon _up, _down;
     private readonly StackPanel _lyrics = new() { Spacing = 6 };
     private readonly StackPanel _next = new() { Spacing = 2 };
+    private readonly Border _coverUp, _coverDown;
     private string _coverUrl = "";
     private string _lyricVideo = "";
     private int _lyricIdx = -3;
@@ -25,7 +26,15 @@ public sealed class NowPlayingPanel : UserControl
     {
         var root = new StackPanel { Padding = new Thickness(16, 8, 16, 16), Spacing = 10 };
         _cover.SizeChanged += (_, e) => _cover.Height = e.NewSize.Width;
-        root.Children.Add(_cover);
+        // doppio tocco sulla copertina = mi piace
+        _cover.DoubleTapped += (_, _) => { if (_a.Settings.DoubleTapLike && _a.Player.Current is Track t && !_a.Store.IsFavorite(t.VideoId)) _a.Store.ToggleFavorite(t); };
+        var coverHost = new Grid();
+        coverHost.Children.Add(_cover);
+        // «mi piace» e «non mi piace» sulla copertina: si vedono anche quando sono premuti
+        _coverUp = CoverBtn(K.ThumbUp, () => { if (_a.Player.Current is Track t) _a.Store.ToggleFavorite(t); }, HorizontalAlignment.Left);
+        _coverDown = CoverBtn(K.ThumbDown, () => { if (_a.Player.Current is Track t) _a.Store.ToggleDislike(t); }, HorizontalAlignment.Right);
+        coverHost.Children.Add(_coverUp); coverHost.Children.Add(_coverDown);
+        root.Children.Add(coverHost);
 
         var tg = new Grid { ColumnSpacing = 4 };
         tg.ColumnDefinitions.Add(new ColumnDefinition());
@@ -70,13 +79,24 @@ public sealed class NowPlayingPanel : UserControl
         UpdateTrack(); UpdateNext(); UpdateLyrics();
     }
 
+    private Border CoverBtn(string glyph, Action click, HorizontalAlignment side)
+    {
+        var b = K.IconBtn(glyph, click, 16, null, K.Brush("#FFFFFF"), 40);
+        b.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(150, 0, 0, 0));
+        b.HorizontalAlignment = side; b.VerticalAlignment = VerticalAlignment.Bottom; b.Margin = new Thickness(10);
+        return b;
+    }
+
     private void UpdateFlags()
     {
+        _coverUp.Visibility = _coverDown.Visibility = _a.Settings.CoverActions ? Visibility.Visible : Visibility.Collapsed;
         var t = _a.Player.Current;
         var fav = t != null && _a.Store.IsFavorite(t.VideoId);
         var dis = t != null && _a.Store.IsDisliked(t.VideoId);
         _up.Foreground = fav ? Pal.Accent : Pal.Text;
         _down.Foreground = dis ? Pal.Red : Pal.Text;
+        ((FontIcon)_coverUp.Child).Foreground = fav ? Pal.Accent : K.Brush("#FFFFFF");
+        ((FontIcon)_coverDown.Child).Foreground = dis ? Pal.Red : K.Brush("#FFFFFF");
     }
 
     private void UpdateTrack()
@@ -115,7 +135,7 @@ public sealed class NowPlayingPanel : UserControl
     {
         var t = _a.Player.Current;
         var ly = _a.Lyrics.Current;
-        var idx = ly != null && ly.Synced ? ly.IndexAt((long)_a.Player.Position.TotalMilliseconds) : -2;
+        var idx = ly != null && ly.Synced ? _a.Lyrics.IndexNow(ly) : -2;
         var vid = t?.VideoId ?? "";
         if (vid == _lyricVideo && idx == _lyricIdx) return;
         _lyricVideo = vid; _lyricIdx = idx;

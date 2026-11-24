@@ -15,10 +15,34 @@ public sealed class LyricsService
     public bool Loading { get; private set; }
     public bool NotFound { get; private set; }
     public event Action? Changed;
+    public event Action? OffsetChanged;
+
+    private readonly Dictionary<string, long> _offsets;
+    private static string OffsetPath => Path.Combine(Persist.Root, "lyric_offsets.json");
+
+    /// <summary>Ritardo di sincronizzazione del brano, in ms: con un valore positivo il testo arriva prima, con uno negativo dopo.</summary>
+    public long Offset(string videoId) => _offsets.GetValueOrDefault(videoId);
+
+    public void SetOffset(string videoId, long ms)
+    {
+        ms = Math.Clamp(ms, -10_000, 10_000);
+        if (ms == 0) _offsets.Remove(videoId); else _offsets[videoId] = ms;
+        try { Persist.WriteAtomic(OffsetPath, System.Text.Json.JsonSerializer.Serialize(_offsets, Persist.Options)); } catch (IOException) { }
+        OffsetChanged?.Invoke();
+    }
+
+    /// <summary>La riga in corso del testo, tenendo conto del ritardo del brano.</summary>
+    public int IndexNow(LyricsText ly)
+    {
+        var t = _a.Player.Current;
+        var off = t == null ? 0 : Offset(t.VideoId);
+        return ly.IndexAt((long)_a.Player.Position.TotalMilliseconds + off);
+    }
 
     public LyricsService(AppServices a)
     {
         _a = a;
+        _offsets = Persist.Read<Dictionary<string, long>>(OffsetPath) ?? new();
         a.Player.StateChanged += OnPlayer;
     }
 

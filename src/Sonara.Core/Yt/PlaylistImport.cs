@@ -124,6 +124,36 @@ public static class PlaylistImport
         catch (Exception) { return new(); }
     }
 
+    private static Dictionary<int, string>? _genreNames;
+
+    /// <summary>I generi (nomi di Deezer) degli album di un artista; null se non si trova o la rete non risponde.</summary>
+    public static async Task<List<string>?> DeezerArtistGenresAsync(string name, CancellationToken ct = default)
+    {
+        var key = Taste.Norm(name);
+        var found = await GetJsonAsync($"https://api.deezer.com/search/artist?q={Uri.EscapeDataString(name)}&limit=5", ct).ConfigureAwait(false);
+        var artist = (found["data"] as JsonArray)?.OfType<JsonObject>().FirstOrDefault(o => Taste.Norm(o["name"]?.GetValue<string>() ?? "") == key);
+        var id = artist?["id"]?.GetValue<long>() ?? 0;
+        if (id <= 0) return null;
+        var albums = (await GetJsonAsync($"https://api.deezer.com/artist/{id}/albums?limit=25", ct).ConfigureAwait(false))["data"] as JsonArray;
+        var ids = albums?.OfType<JsonObject>().Select(o => o["genre_id"]?.GetValue<int>() ?? -1).Where(g => g > 0).ToList();
+        if (ids == null || ids.Count == 0) return null;
+        var names = await GenreNamesAsync(ct).ConfigureAwait(false);
+        var res = ids.Select(g => names.GetValueOrDefault(g)).Where(n => n != null).Select(n => n!).ToList();
+        return res.Count == 0 ? null : res;
+    }
+
+    private static async Task<Dictionary<int, string>> GenreNamesAsync(CancellationToken ct)
+    {
+        if (_genreNames != null) return _genreNames;
+        var m = new Dictionary<int, string>();
+        var a = (await GetJsonAsync("https://api.deezer.com/genre", ct).ConfigureAwait(false))["data"] as JsonArray;
+        if (a != null)
+            foreach (var o in a.OfType<JsonObject>())
+                m[o["id"]?.GetValue<int>() ?? 0] = o["name"]?.GetValue<string>() ?? "";
+        if (m.Count > 0) _genreNames = m;
+        return m;
+    }
+
     private static List<Entry> DeezerEntries(JsonArray? data)
     {
         var res = new List<Entry>();

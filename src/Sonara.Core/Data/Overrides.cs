@@ -46,6 +46,21 @@ public sealed class YtOverrides
     public void Remove(string from) { lock (_gate) { All = All.Where(o => o.From != from).ToList(); Save(); } }
     public void ClearAll() { lock (_gate) { All = new(); Save(); } }
 
+    /// <summary>Unisce le sorgenti di un backup (quelle già presenti restano); restituisce quante sono nuove.</summary>
+    public int MergeFrom(string text)
+    {
+        var d = JsonSerializer.Deserialize<List<Over>>(text, Persist.Options);
+        if (d == null) return 0;
+        lock (_gate)
+        {
+            var add = d.Where(n => All.All(o => o.From != n.From)).ToList();
+            if (add.Count == 0) return 0;
+            All = All.Concat(add).ToList();
+            Save();
+            return add.Count;
+        }
+    }
+
     private void Save()
     {
         try { Persist.WriteAtomic(_path, JsonSerializer.Serialize(All, Persist.Options)); } catch (IOException) { }

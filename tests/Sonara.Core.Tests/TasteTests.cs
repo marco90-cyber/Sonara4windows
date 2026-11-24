@@ -12,9 +12,40 @@ public class TasteTests
     {
         var plays = new Dictionary<string, Play> { ["a"] = new Play(T("a", "Daft Punk"), 5, 1, 2) };
         var w = Taste.Weights(plays, new[] { T("b", "Daft Punk, Pharrell") }, new[] { T("a", "Daft Punk") });
-        Assert.Equal(7, w["a"].Item2);
+        Assert.Equal(7.0, w["a"].Weight);
         var top = Taste.TopArtists(w, 3);
         Assert.Equal("Daft Punk", top[0].Name);
+    }
+
+    [Fact]
+    public void PointsCapListensAndSkips()
+    {
+        var plays = new Dictionary<string, Play> { ["a"] = new Play(T("a", "X"), 12, 1, 2) };
+        var skips = new Dictionary<string, int> { ["a"] = 5, ["h"] = 1 };
+        var w = Taste.Weights(plays, new[] { T("h", "Y") }, Array.Empty<Track>(), skips);
+        Assert.Equal(4.0, w["a"].Weight);   // 5 ascolti (tetto) - 1 (tetto dei salti)
+        Assert.Equal(0.0, w["h"].Weight);   // in cronologia ma saltato
+    }
+
+    [Fact]
+    public void NegativeArtistIsExcluded()
+    {
+        var p = Taste.BuildProfile(new Dictionary<string, Play>(), new[] { T("a", "Z") }, Array.Empty<Track>(),
+            new Dictionary<string, int>(), new[] { T("d1", "Z"), T("d2", "Z") });
+        Assert.True(p.Bad(T("new", "Z")));      // 1 - 2 < 0
+        Assert.True(p.Bad(T("d1", "Q")));       // brano non gradito
+        Assert.False(p.Bad(T("new", "W")));
+        Assert.DoesNotContain("d1", p.Weights.Keys);
+    }
+
+    [Fact]
+    public void GenreScoresSumWeights()
+    {
+        var plays = new Dictionary<string, Play> { ["a"] = new Play(T("a", "X"), 3, 1, 2), ["b"] = new Play(T("b", "Y"), 1, 1, 2) };
+        var p = Taste.BuildProfile(plays, Array.Empty<Track>(), Array.Empty<Track>(), new Dictionary<string, int>(), new[] { T("d", "Q") });
+        var g = Taste.GenreScores(p, t => t.VideoId == "a" || t.VideoId == "d" ? "rock" : t.VideoId == "b" ? "pop" : null);
+        Assert.Equal(2.0, g["rock"]);   // 3 - 1
+        Assert.Equal(1.0, g["pop"]);
     }
 
     [Fact]
@@ -57,6 +88,13 @@ public class TasteTests
         Assert.True(s2.IsFavorite("a"));
         Assert.Equal(1, s2.Plays["a"].Count);
         Assert.True(s2.IsSaved("MPRE1"));
+        var pl = s2.CreatePlaylist("Mia");
+        Assert.True(s2.AddToPlaylist(pl.Id, T("z", "Q")));
+        Assert.False(s2.AddToPlaylist(pl.Id, T("z", "Q")));
+        s2.RecordSkip(T("z", "Q"));
+        var s3 = new YtStore(p);
+        Assert.Single(s3.MyPlaylists[0].Items);
+        Assert.Equal(1, s3.Skips["z"]);
         File.Delete(p);
     }
 }

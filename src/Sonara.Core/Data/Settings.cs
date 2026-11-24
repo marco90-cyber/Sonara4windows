@@ -13,6 +13,8 @@ public sealed class AppSettings
     public int CacheMaxMb { get; set; } = 1024;
     public string FavGenres { get; set; } = "";
     public List<Yt.Entry> FavArtists { get; set; } = new();
+    /// <summary>Gli artisti scelti sono già stati messi anche in Raccolta › Salvati.</summary>
+    public bool FavArtistsSynced { get; set; }
     public bool ImportAutoRefresh { get; set; }
     public int ImportRefreshHours { get; set; } = 24;
     public bool ImportNotify { get; set; } = true;
@@ -23,6 +25,12 @@ public sealed class AppSettings
     public bool CheckUpdates { get; set; } = true;
     public bool ExclusiveOutput { get; set; }
     public bool Normalize { get; set; }
+    /// <summary>Radio infinita: a fine coda accoda brani simili.</summary>
+    public bool InfiniteRadio { get; set; } = true;
+    /// <summary>Mostra «mi piace» e «non mi piace» sulla copertina del lettore.</summary>
+    public bool CoverActions { get; set; } = true;
+    /// <summary>Doppio tocco sulla copertina = mi piace.</summary>
+    public bool DoubleTapLike { get; set; } = true;
     public double Volume { get; set; } = 0.8;
     /// <summary>Dissolvenza tra i brani, in millisecondi (0 = spenta).</summary>
     public int CrossfadeMs { get; set; }
@@ -36,6 +44,12 @@ public sealed class AppSettings
     {
         var s = Persist.Read<AppSettings>(PathOf) ?? new AppSettings();
         if (s.SettingsVersion < 1) { s.AutoFix = true; s.SettingsVersion = 1; }
+        if (s.SettingsVersion < 2)
+        {
+            // prima i generi erano etichette separate da «|»: ora sono gli id di FavGenres separati da virgola
+            s.FavGenres = Yt.FavGenres.MigrateLegacy(s.FavGenres);
+            s.SettingsVersion = 2;
+        }
         return s;
     }
 
@@ -43,6 +57,16 @@ public sealed class AppSettings
     {
         lock (Gate) Persist.WriteAtomic(PathOf, JsonSerializer.Serialize(this, Persist.Options));
         Changed?.Invoke();
+    }
+
+    /// <summary>Applica le impostazioni di un backup (testo JSON) a queste.</summary>
+    public void ImportFrom(string json)
+    {
+        var o = JsonSerializer.Deserialize<AppSettings>(json, Persist.Options);
+        if (o == null) return;
+        foreach (var p in typeof(AppSettings).GetProperties().Where(p => p.CanWrite && p.GetIndexParameters().Length == 0))
+            p.SetValue(this, p.GetValue(o));
+        Save();
     }
 
     public string EffectiveCountry()

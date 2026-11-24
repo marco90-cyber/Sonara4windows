@@ -14,17 +14,55 @@ public sealed class LyricsView : UserControl
     private readonly StackPanel _lines = new() { Padding = new Thickness(40, 24, 40, 200), Spacing = 10 };
     private readonly ScrollViewer _sv = new();
     private readonly List<TextBlock> _tbs = new();
+    private readonly Border _panel = new() { Background = Pal.Panel, BorderBrush = Pal.Line, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(18), Padding = new Thickness(16, 10, 16, 12), MinWidth = 380 };
     private int _active = -2;
+
+    private static string Fmt(long ms) => (ms > 0 ? "+" : ms < 0 ? "−" : "") + (Math.Abs(ms) / 1000.0).ToString("0.0", System.Globalization.CultureInfo.GetCultureInfo("it-IT")) + " s";
+
+    /// <summary>Ritardo di sincronizzazione: pannello compatto sul testo, così si vede subito la riga evidenziata spostarsi.</summary>
+    private void BuildPanel()
+    {
+        var t = _a.Player.Current;
+        if (t == null) { _panel.Visibility = Visibility.Collapsed; return; }
+        var v = _a.Lyrics.Offset(t.VideoId);
+        var sp = new StackPanel { Spacing = 8 };
+        var head = new Grid { ColumnSpacing = 10 };
+        head.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        head.ColumnDefinitions.Add(new ColumnDefinition());
+        head.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        head.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        head.Children.Add(K.Icon(K.Timer, 16, Pal.Sub));
+        var val = K.T("Ritardo  " + Fmt(v), 16, Pal.Text, true); Grid.SetColumn(val, 1); head.Children.Add(val);
+        var reset = K.Clickable(K.T("Azzera", 13, Pal.Accent, true), () => _a.Lyrics.SetOffset(t.VideoId, 0), pad: new Thickness(8, 4, 8, 4)); Grid.SetColumn(reset, 2); head.Children.Add(reset);
+        var done = K.Clickable(K.T("Fatto", 13, Pal.Accent, true), () => _panel.Visibility = Visibility.Collapsed, pad: new Thickness(8, 4, 8, 4)); Grid.SetColumn(done, 3); head.Children.Add(done);
+        sp.Children.Add(head);
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+        foreach (var d in new long[] { -500, -100, 100, 500 })
+        {
+            var dd = d;
+            row.Children.Add(K.Pill((dd > 0 ? "+" : "−") + (Math.Abs(dd) / 1000.0).ToString("0.0", System.Globalization.CultureInfo.GetCultureInfo("it-IT")), () => _a.Lyrics.SetOffset(t.VideoId, _a.Lyrics.Offset(t.VideoId) + dd), false, null, 34));
+        }
+        sp.Children.Add(row);
+        sp.Children.Add(K.T("Positivo: il testo arriva prima · negativo: dopo. Vale solo per questo brano.", 11, Pal.Sub, false, 2));
+        _panel.Child = sp;
+    }
 
     public LyricsView()
     {
         _sv.Content = _lines;
-        Content = _sv;
+        var host = new Grid();
+        host.Children.Add(_sv);
+        _panel.Visibility = Visibility.Collapsed;
+        _panel.VerticalAlignment = VerticalAlignment.Bottom; _panel.HorizontalAlignment = HorizontalAlignment.Center; _panel.Margin = new Thickness(12);
+        host.Children.Add(_panel);
+        Content = host;
         void OnLy() => Rebuild();
         void OnPos() => Highlight();
+        void OnOff() { BuildPanel(); _active = -2; Highlight(); }
         _a.Lyrics.Changed += OnLy;
+        _a.Lyrics.OffsetChanged += OnOff;
         _a.Player.PositionChanged += OnPos;
-        Unloaded += (_, _) => { _a.Lyrics.Changed -= OnLy; _a.Player.PositionChanged -= OnPos; };
+        Unloaded += (_, _) => { _a.Lyrics.Changed -= OnLy; _a.Lyrics.OffsetChanged -= OnOff; _a.Player.PositionChanged -= OnPos; };
         Rebuild();
     }
 
@@ -43,6 +81,7 @@ public sealed class LyricsView : UserControl
             _lines.Children.Add(K.Pill("Riprova", async () => await _a.Lyrics.ReloadAsync(), false, K.Refresh));
             return;
         }
+        _lines.Children.Add(K.Pill("Ritardo…", () => { BuildPanel(); _panel.Visibility = _panel.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible; }, false, K.Timer, 32));
         _lines.Children.Add(K.T($"Fonte: {ly.Source} · {ly.Kind switch { SyncKind.Words => "sync parole", SyncKind.Lines => "sync righe", _ => "solo testo" }}", 12, Pal.Sub));
         for (var i = 0; i < ly.Lines.Count; i++)
         {
@@ -63,7 +102,7 @@ public sealed class LyricsView : UserControl
     {
         var ly = _a.Lyrics.Current;
         if (ly == null || !ly.Synced || _tbs.Count != ly.Lines.Count) return;
-        var idx = ly.IndexAt((long)_a.Player.Position.TotalMilliseconds);
+        var idx = _a.Lyrics.IndexNow(ly);
         if (idx == _active) return;
         if (_active >= 0 && _active < _tbs.Count) { _tbs[_active].Foreground = Pal.Sub; _tbs[_active].Opacity = 0.55; }
         _active = idx;

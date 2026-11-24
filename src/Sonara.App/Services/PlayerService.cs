@@ -6,6 +6,7 @@ using Microsoft.UI.Dispatching;
 using Sonara.Core;
 using Sonara.Core.Audio;
 using Sonara.Core.Data;
+using Sonara.Core.Yt;
 
 namespace Sonara.App.Services;
 
@@ -153,6 +154,7 @@ public sealed class PlayerService : IDisposable
     public void JumpTo(int orderIndex)
     {
         if (orderIndex < 0 || orderIndex >= _order.Count) return;
+        if (orderIndex != _pos) NoteSkip();
         _pos = orderIndex;
         QueueChanged?.Invoke();
         _ = StartCurrentAsync();
@@ -175,9 +177,18 @@ public sealed class PlayerService : IDisposable
         StateChanged?.Invoke();
     }
 
+    /// <summary>Un salto manuale entro 30 secondi dall'inizio del brano pesa -0,5 sui gusti (se il brano finisce da solo non conta).</summary>
+    private void NoteSkip()
+    {
+        if (_reader == null || _pos < 0 || _pos >= _order.Count) return;
+        if (Position.TotalSeconds is >= 0 and < 30 && Current is Track t) _a.Store.RecordSkip(t);
+    }
+
     public void Next(bool auto = false)
     {
         if (_order.Count == 0) return;
+        if (!auto) NoteSkip();
+        if (auto && SleepAtEnd) { SleepAtEnd = false; Stop(); StateChanged?.Invoke(); return; }
         if (auto && Repeat == RepeatMode.One) { _ = StartCurrentAsync(); return; }
         if (_pos + 1 < _order.Count) _pos++;
         else if (Repeat == RepeatMode.All) _pos = 0;
@@ -190,6 +201,7 @@ public sealed class PlayerService : IDisposable
     {
         if (_order.Count == 0) return;
         if (Position.TotalSeconds > 3 || _pos <= 0) { Seek(TimeSpan.Zero); return; }
+        NoteSkip();
         _pos--;
         QueueChanged?.Invoke();
         _ = StartCurrentAsync();
@@ -304,6 +316,7 @@ public sealed class PlayerService : IDisposable
             _timer.Start();
             StateChanged?.Invoke();
             PrefetchNext();
+            MaybeExtendRadio();
         });
     }
 
@@ -325,6 +338,44 @@ public sealed class PlayerService : IDisposable
         });
     }
 
+    private string? _radioFor;
+
+    /// <summary>Radio infinita: quando mancano 2 brani alla fine, accoda quelli che YouTube Music propone dopo l'ultimo.</summary>
+    private async void MaybeExtendRadio()
+    {
+        if (!_a.Settings.InfiniteRadio || Shuffle || Repeat != RepeatMode.Off) return;
+        if (Current is not Track t || _order.Count - _pos > 2 || _radioFor == t.VideoId) return;
+        _radioFor = t.VideoId;
+        try
+        {
+            var list = await YtApi.RadioAsync(t.VideoId).ConfigureAwait(false);
+            _a.RunUi(() =>
+            {
+                var st = _a.Store;
+                var bad = Taste.BuildProfile(st.Plays, st.History, st.Favorites, st.Skips, st.Dislikes).Bad;
+                var have = _items.Select(i => i.VideoId).ToHashSet();
+                var more = list.Where(x => !have.Contains(x.VideoId) && !bad(x)).Take(25).ToList();
+                if (more.Count > 0) AddRange(more);
+            });
+        }
+        catch (Exception) { _radioFor = null; }
+    }
+
+    // ------------------------------------------------------------------ timer di spegnimento
+
+    private DateTime? _sleepAt;
+    /// <summary>Fine del timer di spegnimento (null = spento).</summary>
+    public DateTime? SleepAt => _sleepAt;
+    /// <summary>Si ferma alla fine del brano in corso.</summary>
+    public bool SleepAtEnd { get; private set; }
+
+    public void SetSleep(int? minutes, bool atEnd = false)
+    {
+        _sleepAt = minutes is > 0 ? DateTime.Now.AddMinutes(minutes.Value) : null;
+        SleepAtEnd = atEnd;
+        StateChanged?.Invoke();
+    }
+
     private void PrefetchNext()
     {
         if (_pos + 1 >= _order.Count) return;
@@ -338,6 +389,12 @@ public sealed class PlayerService : IDisposable
 
     private void Tick()
     {
+        if (_sleepAt is DateTime due && DateTime.Now >= due)
+        {
+            _sleepAt = null;
+            if (Playing) TogglePlay();
+            StateChanged?.Invoke();
+        }
         if (_reader == null) return;
         if (Playing)
         {

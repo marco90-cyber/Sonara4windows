@@ -11,41 +11,82 @@ public static class Taste
     private static readonly Regex Marks = new(@"\p{M}+", RegexOptions.Compiled);
     private static readonly Regex NotAlnum = new(@"[^a-z0-9]+", RegexOptions.Compiled);
 
-    /// <summary>Peso di un brano: ascolti contati; quelli della cronologia senza conteggio valgono 1, i preferiti +2.</summary>
-    public static Dictionary<string, (Track Item, int Weight)> Weights(IReadOnlyDictionary<string, Play> plays, IEnumerable<Track> history, IEnumerable<Track> favorites)
+    /// <summary>Punti di ogni gesto: «mi piace» +2, ascolto completo +1 (al massimo 5 per brano), salto entro 30 s -0,5 (al massimo -1 per brano), «non mi piace» -1.</summary>
+    public const double Like = 2.0, Complete = 1.0, Skip = -0.5, MaxSkip = -1.0, Dislike = -1.0;
+    public const int MaxComplete = 5;
+
+    public sealed record Weighted(Track Item, double Weight);
+
+    /// <summary>
+    /// Peso di un brano. Ascolti contati (tetto 5); un brano solo in cronologia vale 1, ma 0 se l'hai saltato;
+    /// il preferito +2; i salti tolgono 0,5 l'uno fino a -1. Il «non mi piace» esclude il brano e pesa sull'artista e sul genere.
+    /// </summary>
+    public static Dictionary<string, Weighted> Weights(IReadOnlyDictionary<string, Play> plays, IEnumerable<Track> history, IEnumerable<Track> favorites, IReadOnlyDictionary<string, int>? skips = null)
     {
-        var o = new Dictionary<string, (Track, int)>();
-        foreach (var p in plays.Values) o[p.Item.VideoId] = (p.Item, p.Count);
-        foreach (var h in history) if (!o.ContainsKey(h.VideoId)) o[h.VideoId] = (h, 1);
+        skips ??= new Dictionary<string, int>();
+        var items = new Dictionary<string, Track>();
+        var b = new Dictionary<string, double>();
+        foreach (var p in plays.Values) { items[p.Item.VideoId] = p.Item; b[p.Item.VideoId] = Math.Min(p.Count, MaxComplete) * Complete; }
+        foreach (var h in history)
+            if (!items.ContainsKey(h.VideoId)) { items[h.VideoId] = h; b[h.VideoId] = skips.GetValueOrDefault(h.VideoId) > 0 ? 0.0 : Complete; }
         foreach (var f in favorites)
         {
-            o.TryGetValue(f.VideoId, out var cur);
-            o[f.VideoId] = (cur.Item1 ?? f, cur.Item2 + 2);
+            items.TryAdd(f.VideoId, f);
+            b[f.VideoId] = b.GetValueOrDefault(f.VideoId) + Like;
         }
+        foreach (var (id, n) in skips)
+            if (items.ContainsKey(id)) b[id] = b.GetValueOrDefault(id) + Math.Max(n * Skip, MaxSkip);
+        return items.ToDictionary(kv => kv.Key, kv => new Weighted(kv.Value, b[kv.Key]));
+    }
+
+    /// <summary>I gusti già pronti: pesi (senza i brani non graditi), filtro per escludere brani e artisti sotto zero, punteggio per artista.</summary>
+    public sealed record Profile(Dictionary<string, Weighted> Weights, Func<Track, bool> Bad, Dictionary<string, double> ArtistScore, List<Track> Dislikes);
+
+    /// <summary>Un artista è escluso quando il suo totale è sotto zero: i suoi brani (ascolti, preferiti, salti) più -1 per ogni «non mi piace». Il brano non gradito è sempre escluso.</summary>
+    public static Profile BuildProfile(IReadOnlyDictionary<string, Play> plays, IEnumerable<Track> history, IEnumerable<Track> favorites, IReadOnlyDictionary<string, int> skips, IEnumerable<Track> dislikes)
+    {
+        var dis = dislikes.ToList();
+        var ids = dis.Select(d => d.VideoId).ToHashSet();
+        var w = Weights(plays, history, favorites, skips).Where(kv => !ids.Contains(kv.Key)).ToDictionary(kv => kv.Key, kv => kv.Value);
+        var artist = ArtistScores(w, dis);
+        return new Profile(w, MakeBad(ids, artist), artist, dis);
+    }
+
+    private static Dictionary<string, double> ArtistScores(Dictionary<string, Weighted> w, IEnumerable<Track> dislikes)
+    {
+        var artist = new Dictionary<string, double>();
+        foreach (var v in w.Values)
+            foreach (var a in ArtistNames(v.Item.Artist)) artist[Norm(a)] = artist.GetValueOrDefault(Norm(a)) + v.Weight;
+        foreach (var d in dislikes)
+            foreach (var a in ArtistNames(d.Artist)) artist[Norm(a)] = artist.GetValueOrDefault(Norm(a)) + Dislike;
+        return artist;
+    }
+
+    private static Func<Track, bool> MakeBad(HashSet<string> ids, Dictionary<string, double> artist) => t =>
+    {
+        if (ids.Contains(t.VideoId)) return true;
+        var first = ArtistNames(t.Artist).FirstOrDefault();
+        return first != null && artist.GetValueOrDefault(Norm(first)) < 0.0;
+    };
+
+    /// <summary>Punteggio dei generi: somma dei pesi dei brani di ogni genere, -1 per ogni «non mi piace». genreOf dà l'id del genere (o null).</summary>
+    public static Dictionary<string, double> GenreScores(Profile p, Func<Track, string?> genreOf)
+    {
+        var o = new Dictionary<string, double>();
+        foreach (var v in p.Weights.Values) { var g = genreOf(v.Item); if (g != null) o[g] = o.GetValueOrDefault(g) + v.Weight; }
+        foreach (var d in p.Dislikes) { var g = genreOf(d); if (g != null) o[g] = o.GetValueOrDefault(g) + Dislike; }
         return o;
     }
 
-    /// <summary>Esclude i brani non graditi e gli artisti con almeno 3 brani non graditi.</summary>
-    public static Func<Track, bool> Excluder(IEnumerable<Track> dislikes)
+    /// <summary>Esclude i brani non graditi e gli artisti con punteggio negativo.</summary>
+    public static Func<Track, bool> Excluder(IEnumerable<Track> dislikes, Dictionary<string, Weighted>? w = null)
     {
         var list = dislikes.ToList();
         var ids = list.Select(d => d.VideoId).ToHashSet();
-        var perArtist = new Dictionary<string, int>();
-        foreach (var d in list)
-        {
-            var a = ArtistNames(d.Artist).FirstOrDefault();
-            if (a != null) perArtist[Norm(a)] = perArtist.GetValueOrDefault(Norm(a)) + 1;
-        }
-        var blocked = perArtist.Where(kv => kv.Value >= 3).Select(kv => kv.Key).ToHashSet();
-        return t =>
-        {
-            if (ids.Contains(t.VideoId)) return true;
-            var first = ArtistNames(t.Artist).FirstOrDefault();
-            return first != null && blocked.Contains(Norm(first));
-        };
+        return MakeBad(ids, ArtistScores(w ?? new Dictionary<string, Weighted>(), list));
     }
 
-    public static List<Track> TopTracks(Dictionary<string, (Track Item, int Weight)> w, int n) =>
+    public static List<Track> TopTracks(Dictionary<string, Weighted> w, int n) =>
         w.Values.OrderByDescending(v => v.Weight).Take(n).Select(v => v.Item).ToList();
 
     /// <summary>"A, B &amp; C" → [A, B, C].</summary>
@@ -60,28 +101,28 @@ public static class Taste
         return NotAlnum.Replace(Marks.Replace(d, ""), " ").Trim();
     }
 
-    /// <summary>Gli artisti più ascoltati (nome, peso), sommando i pesi dei loro brani.</summary>
-    public static List<(string Name, int Weight)> TopArtists(Dictionary<string, (Track Item, int Weight)> w, int n)
+    /// <summary>Gli artisti più ascoltati (nome, peso), sommando i pesi dei loro brani; solo quelli con punteggio positivo.</summary>
+    public static List<(string Name, double Weight)> TopArtists(Dictionary<string, Weighted> w, int n)
     {
         var names = new Dictionary<string, string>();
-        var sum = new Dictionary<string, int>();
-        foreach (var (item, wt) in w.Values)
-            foreach (var a in ArtistNames(item.Artist))
+        var sum = new Dictionary<string, double>();
+        foreach (var v in w.Values)
+            foreach (var a in ArtistNames(v.Item.Artist))
             {
                 var k = Norm(a);
                 if (k.Length == 0) continue;
                 names.TryAdd(k, a);
-                sum[k] = sum.GetValueOrDefault(k) + wt;
+                sum[k] = sum.GetValueOrDefault(k) + v.Weight;
             }
-        return sum.OrderByDescending(kv => kv.Value).Take(n).Select(kv => (names[kv.Key], kv.Value)).ToList();
+        return sum.Where(kv => kv.Value > 0.0).OrderByDescending(kv => kv.Value).Take(n).Select(kv => (names[kv.Key], kv.Value)).ToList();
     }
 
     /// <summary>Un brano di partenza per ogni artista tra i primi: il suo brano più ascoltato.</summary>
-    public static List<Track> Seeds(Dictionary<string, (Track Item, int Weight)> w, int n)
+    public static List<Track> Seeds(Dictionary<string, Weighted> w, int n)
     {
         var used = new HashSet<string>();
         var o = new List<Track>();
-        foreach (var e in w.Values.OrderByDescending(v => v.Weight))
+        foreach (var e in w.Values.Where(v => v.Weight > 0.0).OrderByDescending(v => v.Weight))
         {
             var a = ArtistNames(e.Item.Artist).FirstOrDefault();
             if (a == null) continue;
@@ -123,6 +164,22 @@ public static class FavGenres
     {
         var ids = csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToHashSet();
         return All.Where(g => ids.Contains(g.Id)).ToList();
+    }
+
+    /// <summary>Vecchio formato (etichette separate da «|», es. "Hip hop|Latino") → id separati da virgola.</summary>
+    public static string MigrateLegacy(string old)
+    {
+        if (string.IsNullOrWhiteSpace(old) || !old.Contains('|') && All.Any(g => g.Id == old.Trim())) return old ?? "";
+        var alias = new Dictionary<string, string> { ["hip hop"] = "hiphop", ["latino"] = "reggaeton", ["elettronica"] = "electronic" };
+        var ids = new List<string>();
+        foreach (var part in old.Split(new[] { '|', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var key = part.ToLowerInvariant();
+            var g = All.FirstOrDefault(x => x.Id == key || x.Label.Equals(part, StringComparison.OrdinalIgnoreCase));
+            var id = g?.Id ?? alias.GetValueOrDefault(key);
+            if (id != null && !ids.Contains(id)) ids.Add(id);
+        }
+        return string.Join(",", ids);
     }
 
     public static string Toggle(string csv, string id)

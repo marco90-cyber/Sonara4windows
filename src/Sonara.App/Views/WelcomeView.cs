@@ -24,8 +24,6 @@ public sealed class WelcomeView : UserControl
         Show();
     }
 
-    public static readonly string[] Genres = { "Pop", "Rock", "Hip hop", "Elettronica", "Jazz", "Classica", "Indie", "R&B", "Metal", "Latino", "Dance", "Cantautori" };
-
     private void Show()
     {
         var s = new StackPanel { Spacing = 14 };
@@ -63,53 +61,13 @@ public sealed class WelcomeView : UserControl
                 break;
             case 5:
                 Title("Che musica ti piace?", "Scegli i generi: Sonara parte da qui per i consigli.");
-                var chosen = new HashSet<string>((_a.Settings.FavGenres ?? "").Split('|', StringSplitOptions.RemoveEmptyEntries));
-                var wrap = new ItemsControl();
-                var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-                var rows = new StackPanel { Spacing = 8 };
-                for (var i = 0; i < Genres.Length; i += 4)
-                {
-                    var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-                    foreach (var g in Genres.Skip(i).Take(4))
-                    {
-                        var gg = g;
-                        Border? chip = null;
-                        chip = K.Chip(gg, chosen.Contains(gg), () =>
-                        {
-                            if (!chosen.Add(gg)) chosen.Remove(gg);
-                            _a.Settings.FavGenres = string.Join('|', chosen);
-                            Show();
-                        });
-                        row.Children.Add(chip);
-                    }
-                    rows.Children.Add(row);
-                }
-                s.Children.Add(rows);
+                s.Children.Add(new ScrollViewer { Content = Pickers.Genres(_a.Settings, false, 3), MaxHeight = 380 });
                 break;
         }
         if (_page == 6)
         {
             Title("I tuoi artisti", "Cerca e scegli gli artisti che ascolti di più (facoltativo).");
-            var sel = _a.Settings.FavArtists;
-            var chips = new StackPanel { Spacing = 6 };
-            void Rebuild() { chips.Children.Clear(); foreach (var e in sel.ToList()) { var ee = e; chips.Children.Add(K.Chip("✓ " + ee.Title, true, () => { sel.RemoveAll(x => x.BrowseId == ee.BrowseId); Rebuild(); })); } }
-            var res = new StackPanel { Spacing = 4 };
-            var box = new AutoSuggestBox { PlaceholderText = "Cerca un artista", Width = 360, HorizontalAlignment = HorizontalAlignment.Left };
-            box.QuerySubmitted += async (b, e) =>
-            {
-                res.Children.Clear();
-                try
-                {
-                    var l = await Sonara.Core.Yt.YtApi.SearchEntriesAsync(b.Text, Sonara.Core.Yt.Kind.Artists, 1);
-                    foreach (var a in l.Take(6))
-                    {
-                        var aa = a;
-                        res.Children.Add(K.Clickable(K.T(aa.Title, 13, Pal.Text), () => { if (!sel.Any(x => x.BrowseId == aa.BrowseId)) sel.Add(aa); Rebuild(); }, null, null, 8, new Thickness(8)));
-                    }
-                }
-                catch { res.Children.Add(K.T("Ricerca non riuscita", 12, Pal.Sub)); }
-            };
-            s.Children.Add(box); s.Children.Add(res); s.Children.Add(chips); Rebuild();
+            s.Children.Add(Pickers.Artists(_a.Settings, false));
         }
         var nav = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0) };
         if (_page > 0) nav.Children.Add(K.Pill("Indietro", () => { _page--; Show(); }, false));
