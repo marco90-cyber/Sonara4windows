@@ -120,7 +120,7 @@ public sealed class SettingsView : UserControl
     {
         try
         {
-            var picker = new Windows.Storage.Pickers.FileSavePicker { SuggestedFileName = Path.GetFileNameWithoutExtension(DataTransfer.FileName), SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.Documents };
+            var picker = new Windows.Storage.Pickers.FileSavePicker { SuggestedFileName = Path.GetFileNameWithoutExtension(DataTransfer.FileName), SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary };
             picker.FileTypeChoices.Add("Backup di Sonara", new List<string> { ".json" });
             WinRT.Interop.InitializeWithWindow.Initialize(picker, FolderPick.Hwnd);
             var f = await picker.PickSaveFileAsync();
@@ -135,7 +135,7 @@ public sealed class SettingsView : UserControl
     {
         try
         {
-            var picker = new Windows.Storage.Pickers.FileOpenPicker { SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.Documents };
+            var picker = new Windows.Storage.Pickers.FileOpenPicker { SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary };
             picker.FileTypeFilter.Add(".json");
             WinRT.Interop.InitializeWithWindow.Initialize(picker, FolderPick.Hwnd);
             var f = await picker.PickSingleFileAsync();
