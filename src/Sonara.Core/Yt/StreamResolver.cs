@@ -49,6 +49,13 @@ public sealed class StreamResolver
         return null;
     }
 
+    /// <summary>Toglie dalla cache i file di un video (per riscaricarlo se era rimasto incompleto o rovinato).</summary>
+    public void Invalidate(string videoId)
+    {
+        foreach (var ext in new[] { "mp4", "m4a", "webm", "m4a.part", "mp4.part", "webm.part" })
+            try { File.Delete(PathFor(videoId, ext)); } catch (IOException) { }
+    }
+
     /// <summary>Scarica (se serve) l'audio del video nella cache e ne dà il percorso. Preferisce l'AAC (m4a), che Windows legge di serie.</summary>
     public async Task<Resolved> ResolveAsync(string videoId, IProgress<double>? progress = null, CancellationToken ct = default, bool preferMp4 = true)
     {

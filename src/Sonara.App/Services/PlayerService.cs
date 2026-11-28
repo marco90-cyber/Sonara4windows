@@ -27,6 +27,8 @@ public sealed class PlayerService : IDisposable
     private bool _userStop;
     private bool _counted;
     private double _playedSec;
+    /// <summary>Brano già riscaricato una volta perché il file in cache era rovinato (per non ripetere all'infinito).</summary>
+    private string? _retried;
     private long _loadToken;
 
     private List<Track> _items = new();
@@ -273,6 +275,14 @@ public sealed class PlayerService : IDisposable
         catch (Exception e)
         {
             if (token != Volatile.Read(ref _loadToken)) return;
+            if (e is InvalidDataException && _retried != t.VideoId)
+            {
+                _retried = t.VideoId;
+                Diag.Log($"File di {t.VideoId} incompleto: lo riscarico");
+                _a.Resolver.Invalidate(_a.Overrides.Target(t.VideoId));
+                _a.RunUi(() => _ = StartCurrentAsync());
+                return;
+            }
             Diag.Log($"Non riesco a suonare {t.VideoId} «{t.Title}»: {e}");
             _a.RunUi(() =>
             {
@@ -291,6 +301,12 @@ public sealed class PlayerService : IDisposable
     {
         MediaFoundationApi.Startup();
         var reader = new MediaFoundationReader(path);
+        // file in cache incompleto o rovinato (es. un download interrotto): dura molto meno del brano
+        if (Current is Track cur && cur.DurationSec > 20 && reader.TotalTime.TotalSeconds < cur.DurationSec * 0.6 - 3)
+        {
+            reader.Dispose();
+            throw new InvalidDataException("File in cache incompleto");
+        }
         ISampleProvider sp = reader.ToSampleProvider();
         if (sp.WaveFormat.Channels == 1) sp = new MonoToStereoSampleProvider(sp);
         else if (sp.WaveFormat.Channels > 2) sp = new MultiplexingSampleProvider(new[] { sp }, 2);
@@ -318,6 +334,7 @@ public sealed class PlayerService : IDisposable
             QualityText = q;
             output.Play();
             Playing = true; Loading = false;
+            if (_retried == Current?.VideoId) { /* riscaricato e partito: va bene */ }
             _timer.Start();
             StateChanged?.Invoke();
             PrefetchNext();
@@ -338,6 +355,15 @@ public sealed class PlayerService : IDisposable
         _a.RunUi(() =>
         {
             if (_userStop || reader != _reader) return;
+            // un brano che «finisce» subito è un file rovinato: si riscarica una volta invece di saltare al successivo
+            if (e.Exception == null && _playedSec < 2 && Current is Track c && c.DurationSec > 20 && _retried != c.VideoId && _a.Downloads.FileOf(c.VideoId) == null)
+            {
+                _retried = c.VideoId;
+                Diag.Log($"{c.VideoId} è finito dopo {_playedSec:0.#} s: file rovinato, lo riscarico");
+                _a.Resolver.Invalidate(_a.Overrides.Target(c.VideoId));
+                _ = StartCurrentAsync();
+                return;
+            }
             if (e.Exception != null) Error?.Invoke("Errore di riproduzione: " + Short(e.Exception));
             Next(auto: true);
         });
