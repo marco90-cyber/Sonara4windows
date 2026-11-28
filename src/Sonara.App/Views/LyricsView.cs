@@ -15,6 +15,8 @@ public sealed class LyricsView : UserControl
     private readonly ScrollViewer _sv = new();
     private readonly List<TextBlock> _tbs = new();
     private readonly Border _panel = new() { Background = Pal.Panel, BorderBrush = Pal.Line, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(18), Padding = new Thickness(16, 10, 16, 12), MinWidth = 380 };
+    private readonly List<List<Microsoft.UI.Xaml.Documents.Run>?> _runs = new();
+    private readonly Microsoft.UI.Xaml.DispatcherTimer _tick = new() { Interval = TimeSpan.FromMilliseconds(70) };
     private int _active = -2;
 
     private static string Fmt(long ms) => (ms > 0 ? "+" : ms < 0 ? "−" : "") + (Math.Abs(ms) / 1000.0).ToString("0.0", System.Globalization.CultureInfo.GetCultureInfo("it-IT")) + " s";
@@ -64,12 +66,16 @@ public sealed class LyricsView : UserControl
         _a.Lyrics.OffsetChanged += OnOff;
         _a.Player.PositionChanged += OnPos;
         Unloaded += (_, _) => { _a.Lyrics.Changed -= OnLy; _a.LyricsAi.Changed -= OnLy; _a.Lyrics.OffsetChanged -= OnOff; _a.Player.PositionChanged -= OnPos; };
+        // con i tempi per parola l'evidenziazione scorre parola per parola: serve un battito più fitto di quello del lettore
+        _tick.Tick += (_, _) => { if (_runs.Any(r => r != null)) Highlight(); };
+        Loaded += (_, _) => _tick.Start();
+        Unloaded += (_, _) => _tick.Stop();
         Rebuild();
     }
 
     private void Rebuild()
     {
-        _lines.Children.Clear(); _tbs.Clear(); _active = -2;
+        _lines.Children.Clear(); _tbs.Clear(); _runs.Clear(); _active = -2;
         var t = _a.Player.Current;
         _lines.Children.Add(K.T(t?.Title ?? "Testo", 26, Pal.Text, true, 2));
         if (t != null) _lines.Children.Add(K.T(t.Artist, 14, Pal.Sub));
@@ -106,6 +112,14 @@ public sealed class LyricsView : UserControl
             var l = ly.Lines[i];
             var tb = new TextBlock { Text = l.Text.Length == 0 ? "♪" : l.Text, FontSize = 24, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, Foreground = ly.Synced ? Pal.Sub : Pal.Text, Opacity = ly.Synced ? 0.55 : 1 };
             _tbs.Add(tb);
+            if (ly.Kind == SyncKind.Words && l.Words.Count > 0)
+            {
+                tb.Text = "";
+                var rs = new List<Microsoft.UI.Xaml.Documents.Run>();
+                foreach (var w in l.Words) { var r = new Microsoft.UI.Xaml.Documents.Run { Text = w.Text, Foreground = Pal.Sub }; tb.Inlines.Add(r); rs.Add(r); }
+                _runs.Add(rs);
+            }
+            else _runs.Add(null);
             if (ly.Synced && l.Start >= 0)
             {
                 var start = l.Start;
@@ -119,16 +133,35 @@ public sealed class LyricsView : UserControl
     private void Highlight()
     {
         var ly = _a.Lyrics.Current;
-        if (ly == null || !ly.Synced || _tbs.Count != ly.Lines.Count) return;
+        if (ly == null || !ly.Synced || _tbs.Count != ly.Lines.Count || _runs.Count != _tbs.Count) return;
         var idx = _a.Lyrics.IndexNow(ly);
-        if (idx == _active) return;
-        if (_active >= 0 && _active < _tbs.Count) { _tbs[_active].Foreground = Pal.Sub; _tbs[_active].Opacity = 0.55; }
-        _active = idx;
-        if (idx >= 0)
+        if (idx != _active)
         {
-            _tbs[idx].Foreground = Pal.Text; _tbs[idx].Opacity = 1;
-            var pt = _tbs[idx].TransformToVisual(_lines).TransformPoint(new Windows.Foundation.Point(0, 0));
-            _sv.ChangeView(null, Math.Max(0, pt.Y - _sv.ViewportHeight / 3), null);
+            if (_active >= 0 && _active < _tbs.Count)
+            {
+                _tbs[_active].Foreground = Pal.Sub; _tbs[_active].Opacity = 0.55;
+                if (_runs[_active] is { } old) foreach (var r in old) r.Foreground = Pal.Sub;
+            }
+            _active = idx;
+            if (idx >= 0)
+            {
+                _tbs[idx].Foreground = Pal.Text; _tbs[idx].Opacity = 1;
+                var pt = _tbs[idx].TransformToVisual(_lines).TransformPoint(new Windows.Foundation.Point(0, 0));
+                _sv.ChangeView(null, Math.Max(0, pt.Y - _sv.ViewportHeight / 3), null);
+            }
+        }
+        // parola per parola: quelle già cantate si accendono, le altre restano sbiadite
+        if (idx >= 0 && _runs[idx] is { } runs)
+        {
+            var t = _a.Player.Current;
+            var now = (long)_a.Player.Position.TotalMilliseconds + (t == null ? 0 : _a.Lyrics.Offset(t.VideoId));
+            var ws = ly.Lines[idx].Words;
+            for (var i = 0; i < runs.Count && i < ws.Count; i++)
+            {
+                var on = now >= ws[i].Start;
+                var want = on ? Pal.Text : Pal.Sub;
+                if (!ReferenceEquals(runs[i].Foreground, want)) runs[i].Foreground = want;
+            }
         }
     }
 }
