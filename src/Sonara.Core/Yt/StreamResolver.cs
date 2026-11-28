@@ -8,6 +8,8 @@ public sealed class StreamResolver
 {
     private readonly YoutubeClient _yt = new();
     private readonly string _cacheDir;
+    // un solo scaricamento alla volta per brano: lettore, precaricamento e testo con AI non si pestano i piedi sullo stesso file
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> _locks = new();
 
     public StreamResolver(string cacheDir)
     {
@@ -53,6 +55,20 @@ public sealed class StreamResolver
         var cached = CachedFile(videoId);
         if (cached != null) return new Resolved(cached, Path.GetExtension(cached).TrimStart('.'), 0);
 
+        var gate = _locks.GetOrAdd(videoId, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            // intanto un altro lo ha già scaricato?
+            cached = CachedFile(videoId);
+            if (cached != null) return new Resolved(cached, Path.GetExtension(cached).TrimStart('.'), 0);
+            return await DownloadAsync(videoId, progress, ct).ConfigureAwait(false);
+        }
+        finally { gate.Release(); }
+    }
+
+    private async Task<Resolved> DownloadAsync(string videoId, IProgress<double>? progress, CancellationToken ct)
+    {
         var manifest = await _yt.Videos.Streams.GetManifestAsync(videoId, ct).ConfigureAwait(false);
         var audio = manifest.GetAudioOnlyStreams().ToList();
         var mp4 = audio.Where(s => s.Container == Container.Mp4).ToList();
@@ -64,6 +80,7 @@ public sealed class StreamResolver
         var ext = info.Container == Container.Mp4 ? "m4a" : info.Container.Name;
         var path = PathFor(videoId, ext);
         var tmp = path + ".part";
+        try { File.Delete(tmp); } catch (IOException) { }   // avanzo di un tentativo interrotto
         await _yt.Videos.Streams.DownloadAsync(info, tmp, progress, ct).ConfigureAwait(false);
         File.Move(tmp, path, true);
         return new Resolved(path, ext, (int)(info.Bitrate.BitsPerSecond / 1000));
