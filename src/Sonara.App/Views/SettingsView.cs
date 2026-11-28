@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Sonara.App.Services;
 using Sonara.App.Ui;
+using Sonara.Core;
 using Sonara.Core.Data;
 
 namespace Sonara.App.Views;
@@ -72,6 +73,25 @@ public sealed class SettingsView : UserControl
         xr.Children.Add(K.Pill("Esporta…", ExportAsync, false, K.Download));
         xr.Children.Add(K.Pill("Importa…", ImportAsync, false, K.Folder));
         r.Children.Add(xr);
+
+        r.Children.Add(Sec("Registro (log)"));
+        r.Children.Add(K.T("Annota cosa succede quando un brano non parte o un'operazione fallisce. Se qualcosa non va, aprilo e mandami il contenuto.", 12, Pal.Sub, false, 0));
+        var lr = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
+        lr.Children.Add(K.Pill("Apri il log", () =>
+        {
+            try
+            {
+                var f = Diag.Path!;
+                if (!File.Exists(f)) File.WriteAllText(f, "");
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(f) { UseShellExecute = true });
+            }
+            catch (Exception e) { _ = K.Info(XamlRoot, "Log", e.Message); }
+        }, false, K.Lyrics));
+        lr.Children.Add(K.Pill("Apri la cartella", () =>
+        {
+            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Persist.Root) { UseShellExecute = true }); } catch (Exception) { }
+        }, false, K.Folder));
+        r.Children.Add(lr);
 
         r.Children.Add(Sec("Dati e ripristino"));
         r.Children.Add(K.T("Ogni voce chiede conferma. Dopo la cancellazione Sonara si riavvia da sola.", 12, Pal.Sub, false, 0));

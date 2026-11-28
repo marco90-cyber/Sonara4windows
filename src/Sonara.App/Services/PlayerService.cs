@@ -252,6 +252,8 @@ public sealed class PlayerService : IDisposable
         Loading = true; Playing = false; QualityText = "";
         StateChanged?.Invoke();
         _a.Store.AddHistory(t);
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        Diag.Log($"Avvio {t.VideoId} «{t.Title}» – {t.Artist}");
         try
         {
             string path; int kbps = 0;
@@ -262,10 +264,12 @@ public sealed class PlayerService : IDisposable
                 var r = await _a.Resolver.ResolveAsync(_a.Overrides.Target(t.VideoId), null, ct).ConfigureAwait(false);
                 path = r.FilePath; kbps = r.BitrateKbps;
             }
-            if (token != Volatile.Read(ref _loadToken)) return;
+            if (token != Volatile.Read(ref _loadToken)) { Diag.Log($"Avvio {t.VideoId}: sostituito da un altro brano dopo {sw.ElapsedMilliseconds} ms"); return; }
+            Diag.Log($"File pronto {t.VideoId} ({Path.GetFileName(path)}) dopo {sw.ElapsedMilliseconds} ms");
             await Task.Run(() => OpenAndPlay(path, kbps, token), ct).ConfigureAwait(false);
+            Diag.Log($"In riproduzione {t.VideoId} dopo {sw.ElapsedMilliseconds} ms");
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException) { Diag.Log($"Avvio {t.VideoId}: interrotto dopo {sw.ElapsedMilliseconds} ms"); }
         catch (Exception e)
         {
             if (token != Volatile.Read(ref _loadToken)) return;
