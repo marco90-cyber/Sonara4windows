@@ -50,7 +50,7 @@ public sealed class HomeView : UserControl
         rc.RefreshRequested += async (_, e) => { using var d = e.GetDeferral(); await RefreshAll(); };
         Content = rc;
         var f5 = new Microsoft.UI.Xaml.Input.KeyboardAccelerator { Key = Windows.System.VirtualKey.F5 };
-        f5.Invoked += (_, e) => { e.Handled = true; _ = RefreshAll(); };
+        f5.Invoked += (sender, e) => { e.Handled = true; _ = RefreshAll(); };
         KeyboardAccelerators.Add(f5);
         if (!S.FavArtistsSynced)
         {

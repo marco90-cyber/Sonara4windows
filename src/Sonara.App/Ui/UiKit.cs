@@ -157,8 +157,9 @@ public static class K
     /// <summary>Elementi che vanno a capo da soli, riga dopo riga (pastiglie, schede).</summary>
     public static UIElement Wrap(IEnumerable<UIElement> items, double hSpacing = 8, double vSpacing = 8)
     {
-        var r = new ItemsRepeater { ItemsSource = items.ToList(), Layout = new FlowLayout { MinColumnSpacing = hSpacing, MinRowSpacing = vSpacing } };
-        return r;
+        var p = new WrapPanelK { HSpacing = hSpacing, VSpacing = vSpacing };
+        foreach (var i in items) p.Children.Add(i);
+        return p;
     }
 
     public static ProgressRing Spinner(double size = 28) => new() { IsActive = true, Width = size, Height = size, Foreground = Pal.Accent, HorizontalAlignment = HorizontalAlignment.Center };
@@ -190,5 +191,38 @@ public static class K
     {
         var d = new ContentDialog { XamlRoot = root, Title = title, Content = new TextBlock { Text = body, TextWrapping = TextWrapping.Wrap }, CloseButtonText = "Ok" };
         await d.ShowAsync();
+    }
+}
+
+/// <summary>Pannello che mette gli elementi in riga e va a capo quando non c'è più posto.</summary>
+public sealed class WrapPanelK : Panel
+{
+    public double HSpacing { get; set; } = 8;
+    public double VSpacing { get; set; } = 8;
+
+    protected override Size MeasureOverride(Size available)
+    {
+        double x = 0, y = 0, rowH = 0, maxW = 0;
+        foreach (var c in Children)
+        {
+            c.Measure(new Size(available.Width, double.PositiveInfinity));
+            var d = c.DesiredSize;
+            if (x > 0 && x + d.Width > available.Width) { y += rowH + VSpacing; x = 0; rowH = 0; }
+            x += d.Width + HSpacing; rowH = Math.Max(rowH, d.Height); maxW = Math.Max(maxW, x - HSpacing);
+        }
+        return new Size(double.IsInfinity(available.Width) ? maxW : Math.Min(maxW, available.Width), y + rowH);
+    }
+
+    protected override Size ArrangeOverride(Size finalSize)
+    {
+        double x = 0, y = 0, rowH = 0;
+        foreach (var c in Children)
+        {
+            var d = c.DesiredSize;
+            if (x > 0 && x + d.Width > finalSize.Width) { y += rowH + VSpacing; x = 0; rowH = 0; }
+            c.Arrange(new Rect(x, y, d.Width, d.Height));
+            x += d.Width + HSpacing; rowH = Math.Max(rowH, d.Height);
+        }
+        return finalSize;
     }
 }
