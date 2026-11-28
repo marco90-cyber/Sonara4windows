@@ -269,6 +269,7 @@ public sealed class PlayerService : IDisposable
         catch (Exception e)
         {
             if (token != Volatile.Read(ref _loadToken)) return;
+            Diag.Log($"Non riesco a suonare {t.VideoId} «{t.Title}»: {e}");
             _a.RunUi(() =>
             {
                 Loading = false; Playing = false;

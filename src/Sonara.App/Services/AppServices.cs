@@ -35,6 +35,7 @@ public sealed class AppServices
         Runner = new ImportRunner(Imports);
         Overrides = new YtOverrides();
         AutoFix = new AutoFix(Overrides) { Enabled = () => Settings.AutoFix };
+        Diag.Path = System.IO.Path.Combine(Persist.Root, "log.txt");
         Resolver = new StreamResolver(Persist.CacheDir) { Quality = Settings.Quality };
         _ = Task.Run(() => { try { Resolver.Trim(Settings.CacheMaxMb * 1024L * 1024L); } catch { } });
         Downloads = new DownloadManager(Settings, Resolver);
