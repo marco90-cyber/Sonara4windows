@@ -22,6 +22,7 @@ public sealed class AppServices
     public DspSettings Dsp { get; set; }
     public PlayerService Player { get; }
     public LyricsService Lyrics { get; }
+    public LyricsAiService LyricsAi { get; }
     public DispatcherQueue UI { get; }
 
     public AppServices(DispatcherQueue ui)
@@ -40,6 +41,7 @@ public sealed class AppServices
         Dsp = DspSettings.Load();
         Player = new PlayerService(this);
         Lyrics = new LyricsService(this);
+        LyricsAi = new LyricsAiService(this);
         I = this;
 
         // copia di riserva nella cartella dei download a ogni cambiamento

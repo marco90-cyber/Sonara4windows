@@ -73,7 +73,7 @@ public sealed class LyricsService
         try
         {
             var file = Path.Combine(DirPath, t.VideoId + ".lrc");
-            if (File.Exists(file)) res = Lrc.Parse(await File.ReadAllTextAsync(file), "LRCLIB");
+            if (File.Exists(file)) res = ParseCached(await File.ReadAllTextAsync(file));
             else
             {
                 res = await LyricsProviders.FetchAsync(new LyricsQuery(t.Title, t.Artist, "", (int)t.DurationSec));
@@ -90,6 +90,21 @@ public sealed class LyricsService
         {
             Current = res != null && !res.IsEmpty ? res : null;
             NotFound = Current == null; Loading = false;
+            Changed?.Invoke();
+        });
+    }
+
+    private static LyricsText ParseCached(string raw) => Lrc.Parse(raw, AiLyrics.IsAiLrc(raw) ? AiLyrics.Source : "LRCLIB");
+
+    /// <summary>Salva il testo scritto dall'AI nella cache; se il brano è ancora quello in corso lo mostra subito.</summary>
+    public async Task SaveGeneratedAsync(Track t, string lrc)
+    {
+        await File.WriteAllTextAsync(Path.Combine(DirPath, t.VideoId + ".lrc"), lrc);
+        _a.RunUi(() =>
+        {
+            if (_a.Player.Current?.VideoId != t.VideoId) return;
+            Interlocked.Increment(ref _token);
+            Current = ParseCached(lrc); NotFound = false; Loading = false;
             Changed?.Invoke();
         });
     }

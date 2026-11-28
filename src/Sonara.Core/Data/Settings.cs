@@ -34,6 +34,9 @@ public sealed class AppSettings
     public double Volume { get; set; } = 0.8;
     /// <summary>Dissolvenza tra i brani, in millisecondi (0 = spenta).</summary>
     public int CrossfadeMs { get; set; }
+    /// <summary>Testo con AI: modello Whisper (Base o Small) e lingua (auto o codice).</summary>
+    public string WhisperModel { get; set; } = "Base";
+    public string WhisperLang { get; set; } = "auto";
 
     private static string PathOf => Path.Combine(Persist.Root, "settings.json");
     private static readonly object Gate = new();

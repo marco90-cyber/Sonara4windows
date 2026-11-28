@@ -132,7 +132,7 @@ public static class Feed
         return res;
     }
 
-    private static async Task<Entry?> ArtistEntryAsync(string name, CancellationToken ct)
+    public static async Task<Entry?> ArtistEntryAsync(string name, CancellationToken ct = default)
     {
         var key = Taste.Norm(name);
         lock (ArtistCache) { if (ArtistCache.TryGetValue(key, out var c)) return c; }

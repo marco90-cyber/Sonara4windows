@@ -67,7 +67,7 @@ public sealed class WelcomeView : UserControl
         if (_page == 6)
         {
             Title("I tuoi artisti", "Cerca e scegli gli artisti che ascolti di più (facoltativo).");
-            s.Children.Add(Pickers.Artists(_a.Settings, false));
+            s.Children.Add(new ScrollViewer { Content = Pickers.Artists(_a.Settings, false), MaxHeight = 400 });
         }
         var nav = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0) };
         if (_page > 0) nav.Children.Add(K.Pill("Indietro", () => { _page--; Show(); }, false));

@@ -45,7 +45,13 @@ public sealed class HomeView : UserControl
     public HomeView()
     {
         _scroll = new ScrollViewer { Content = _body, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
-        Content = _scroll;
+        // trascinando verso il basso (tocco o penna), o con F5, la Home si riaggiorna: suggerimenti, mix, novità e scaffali personali
+        var rc = new RefreshContainer { Content = _scroll };
+        rc.RefreshRequested += async (_, e) => { using var d = e.GetDeferral(); await RefreshAll(); };
+        Content = rc;
+        var f5 = new Microsoft.UI.Xaml.Input.KeyboardAccelerator { Key = Windows.System.VirtualKey.F5 };
+        f5.Invoked += (_, e) => { e.Handled = true; _ = RefreshAll(); };
+        KeyboardAccelerators.Add(f5);
         if (!S.FavArtistsSynced)
         {
             // gli artisti già scelti (Benvenuto o Impostazioni) devono essere anche in Raccolta › Salvati
@@ -98,10 +104,19 @@ public sealed class HomeView : UserControl
         else _body.Children.Add(ImportHint());
         foreach (var sh in C.Explore) _body.Children.Add(Shelves.Make(sh));
         foreach (var sh in C.Remote) _body.Children.Add(Shelves.Make(sh));
-        var refresh = K.Pill("Aggiorna suggerimenti", () => { C.Remote = new(); C.RemoteAt = 0; _ = LoadAsync(true); }, false, K.Refresh);
+        var refresh = K.Pill("Aggiorna suggerimenti", () => _ = RefreshAll(), false, K.Refresh);
         refresh.HorizontalAlignment = HorizontalAlignment.Left; refresh.Margin = new Thickness(0, 24, 0, 0);
         _body.Children.Add(refresh);
         if (offset > 0) _scroll.DispatcherQueue.TryEnqueue(() => _scroll.ChangeView(null, offset, null, true));
+    }
+
+    /// <summary>Rifà tutto da capo: suggerimenti di YouTube Music, mix, Scopri, novità, scaffali di generi e artisti.</summary>
+    private async Task RefreshAll()
+    {
+        C.Remote = new(); C.RemoteAt = 0; C.Explore = new();
+        C.MixKey = ""; C.GenreKey = ""; C.ArtistKey = ""; C.WeeklyKey = ""; C.ReleasesAt = 0; C.GenreAt = 0; C.PersonalAt = 0;
+        Refresh();
+        await LoadAsync(true);
     }
 
     private static UIElement Center(UIElement e) { var g = new Grid { Padding = new Thickness(0, 32, 0, 0) }; g.Children.Add(e); return g; }

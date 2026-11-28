@@ -154,6 +154,13 @@ public static class K
         };
     }
 
+    /// <summary>Elementi che vanno a capo da soli, riga dopo riga (pastiglie, schede).</summary>
+    public static UIElement Wrap(IEnumerable<UIElement> items, double hSpacing = 8, double vSpacing = 8)
+    {
+        var r = new ItemsRepeater { ItemsSource = items.ToList(), Layout = new FlowLayout { MinColumnSpacing = hSpacing, MinRowSpacing = vSpacing } };
+        return r;
+    }
+
     public static ProgressRing Spinner(double size = 28) => new() { IsActive = true, Width = size, Height = size, Foreground = Pal.Accent, HorizontalAlignment = HorizontalAlignment.Center };
 
     public static string Dur(TimeSpan t) => t.TotalHours >= 1 ? $"{(int)t.TotalHours}:{t.Minutes:00}:{t.Seconds:00}" : $"{t.Minutes}:{t.Seconds:00}";

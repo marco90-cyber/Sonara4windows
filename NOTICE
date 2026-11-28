@@ -57,3 +57,7 @@ NewPipeExtractor (https://github.com/TeamNewPipe/NewPipeExtractor) - GPL-3.0
 
 Google Sans Flex (app/src/main/res/font/google_sans_flex.ttf, preso da LastWave) - SIL Open Font License 1.1.
 Scala dei testi e angoli dei componenti ripresi dal tema di LastWave (GPL-3.0).
+
+whisper.cpp (https://github.com/ggml-org/whisper.cpp) - MIT
+  Programma ufficiale per il «Testo con AI»: l'app lo scarica al primo uso (non è incluso nell'installer), insieme al modello ggml
+  (https://huggingface.co/ggerganov/whisper.cpp, modelli Whisper di OpenAI, MIT). Il lavoro avviene tutto sul PC.

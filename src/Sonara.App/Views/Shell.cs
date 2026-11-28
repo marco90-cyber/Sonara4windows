@@ -178,6 +178,7 @@ public sealed class Shell : UserControl
         Item(K.Home, "Home", "home", () => new HomeView());
         Item(K.Compass, "Esplora", "explore", () => new ExploreView());
         Item(K.Library, "Raccolta", "library", () => new LibraryView());
+        Item(K.Shuffle, "Generator", "generator", () => new GeneratorView());
     }
 
     private void BuildLists()

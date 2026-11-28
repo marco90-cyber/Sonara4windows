@@ -60,9 +60,10 @@ public sealed class LyricsView : UserControl
         void OnPos() => Highlight();
         void OnOff() { BuildPanel(); _active = -2; Highlight(); }
         _a.Lyrics.Changed += OnLy;
+        _a.LyricsAi.Changed += OnLy;
         _a.Lyrics.OffsetChanged += OnOff;
         _a.Player.PositionChanged += OnPos;
-        Unloaded += (_, _) => { _a.Lyrics.Changed -= OnLy; _a.Lyrics.OffsetChanged -= OnOff; _a.Player.PositionChanged -= OnPos; };
+        Unloaded += (_, _) => { _a.Lyrics.Changed -= OnLy; _a.LyricsAi.Changed -= OnLy; _a.Lyrics.OffsetChanged -= OnOff; _a.Player.PositionChanged -= OnPos; };
         Rebuild();
     }
 
@@ -75,13 +76,30 @@ public sealed class LyricsView : UserControl
         var ly = _a.Lyrics.Current;
         if (t == null) { _lines.Children.Add(K.T("Nessun brano in riproduzione.", 14, Pal.Sub)); return; }
         if (_a.Lyrics.Loading) { _lines.Children.Add(K.Spinner()); return; }
+        var ai = _a.LyricsAi;
+        if (ai.Busy && ai.Current.TrackId == t.VideoId)
+        {
+            _lines.Children.Add(K.T("Scrivo il testo con l'AI", 14, Pal.Text, true));
+            _lines.Children.Add(K.T(ai.Current.Stage + (ai.Current.Percent > 0 ? $" · {ai.Current.Percent}%" : "…"), 13, Pal.Sub));
+            _lines.Children.Add(new ProgressBar { Foreground = Pal.Accent, Maximum = 100, Value = ai.Current.Percent, IsIndeterminate = ai.Current.Percent <= 0, MaxWidth = 420, HorizontalAlignment = HorizontalAlignment.Left });
+            _lines.Children.Add(K.Pill("Dettagli…", () => LyricsAiDialog.Show(XamlRoot, t), false, null, 34));
+            return;
+        }
         if (ly == null)
         {
             _lines.Children.Add(K.T("Testo non trovato per questo brano.", 14, Pal.Sub));
-            _lines.Children.Add(K.Pill("Riprova", async () => await _a.Lyrics.ReloadAsync(), false, K.Refresh));
+            if (ai.Current.Phase == LyricsAiService.Phase.Failed && ai.Current.TrackId == t.VideoId)
+                _lines.Children.Add(K.T("Testo con AI non riuscito: " + ai.Current.Message, 13, K.Brush("#FF6B6B"), false, 0));
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
+            row.Children.Add(K.Pill("Riprova", async () => await _a.Lyrics.ReloadAsync(), false, K.Refresh));
+            row.Children.Add(K.Pill("Genera il testo con AI", () => LyricsAiDialog.Show(XamlRoot, t), true, K.Lyrics));
+            _lines.Children.Add(row);
             return;
         }
-        _lines.Children.Add(K.Pill("Ritardo…", () => { BuildPanel(); _panel.Visibility = _panel.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible; }, false, K.Timer, 32));
+        var tools = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        tools.Children.Add(K.Pill("Ritardo…", () => { BuildPanel(); _panel.Visibility = _panel.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible; }, false, K.Timer, 32));
+        tools.Children.Add(K.Pill("Testo con AI…", () => LyricsAiDialog.Show(XamlRoot, t), false, K.Lyrics, 32));
+        _lines.Children.Add(tools);
         _lines.Children.Add(K.T($"Fonte: {ly.Source} · {ly.Kind switch { SyncKind.Words => "sync parole", SyncKind.Lines => "sync righe", _ => "solo testo" }}", 12, Pal.Sub));
         for (var i = 0; i < ly.Lines.Count; i++)
         {
